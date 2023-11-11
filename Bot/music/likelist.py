@@ -3,10 +3,31 @@ import random
 from ..api.likelist import LikeListAPI
 
 class LikeList():
+    likelist_cache = {}
     def __init__(self, likelist_api: LikeListAPI):
         self.user_id = likelist_api.user_id
-        self.songs = ['https://www.youtube.com/watch?v=B_BRs_DTvqo', 'https://www.youtube.com/watch?v=9wh8FgsEtNQ', 'https://www.youtube.com/watch?v=0E1TQNrYVEg']
+        self.likelist_api = likelist_api
         self.current_song_index = -1
+
+        self.fetch_all_songs()
+
+    @classmethod
+    def load(self, user_id):
+        if user_id in self.likelist_cache:
+            return self.likelist_cache[user_id]
+        
+        likelist_api = LikeListAPI(user_id)
+        likelist = LikeList(likelist_api)
+        self.likelist_cache[user_id] = likelist
+
+        return likelist
+    
+    def add_song(self, song):
+        self.likelist_api.add_song(song)
+        self.songs.append(song)
+
+    def fetch_all_songs(self):
+        self.songs = self.likelist_api.get_all_songs()
 
     def shuffle(self):
         self.songs = random.shuffle(self.songs)

@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..music.player import Player
+from ..music.likelist import LikeList
 
 class Command(commands.Cog):
 
@@ -49,7 +50,7 @@ class Command(commands.Cog):
 
         # 切断する
         await message.guild.voice_client.disconnect()
-
+        self.players.pop(ctx.guild.id)
         await message.channel.send("切断しました。")
 
 
@@ -119,6 +120,13 @@ class Command(commands.Cog):
     async def playlist(self, ctx):
         """show playlist"""
         await ctx.send("playlist")
+
+    @commands.command(name='like', description="add likelist")
+    async def like(self, ctx, arg):
+        """add likelist"""
+        LikeList.load(ctx.author.id).add_song(arg)
+
+        await ctx.send("like")
 
 
     def get_player(self, guild_id):

@@ -121,6 +121,7 @@ class Player():
     def song_remains(self):
         return len(self.playlist.all_songs) - self.__current_song_index - 1
 
+    # 内部カウントを使うイテレータ
     def next_song(self):
         self.__current_song_index += 1
 
