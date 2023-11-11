@@ -1,11 +1,10 @@
 import discord
 import asyncio
-
 from discord import app_commands
 from discord.ext import commands
 
-from .command import Command
-from .channel_observer import ChannelObserver
+from .cogs.player_command import Command
+from .cogs.player_channel_observer import ChannelObserver
 
 class GentleBot():
 
