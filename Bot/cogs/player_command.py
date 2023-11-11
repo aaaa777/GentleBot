@@ -32,7 +32,8 @@ class Command(commands.Cog):
         # ボイスチャンネルに接続する
         await message.author.voice.channel.connect()
         player = self.get_player(ctx.guild.id)
-        player.add_user(message.author.id)
+        users = self.get_voice_user_ids(ctx.guild.id)
+        player.update_users(users)
 
         await message.channel.send("接続しました。")
 
@@ -60,7 +61,7 @@ class Command(commands.Cog):
         player.fill_playlist_10()
         print(player.playlist.all_songs)
 
-        player.start()
+        asyncio.create_task(player.start())
         await ctx.send("play")
 
     @commands.command(name='pause', description="pause music")
@@ -80,6 +81,8 @@ class Command(commands.Cog):
     @commands.command(name='skip', description="skip music")
     async def skip(self, ctx):
         """skip music"""
+        player = self.get_player(ctx.guild.id)
+        player.skip()
         await ctx.send("skip")
 
     @commands.command(name='repeat', description="repeat music")
@@ -122,7 +125,7 @@ class Command(commands.Cog):
         if guild_id in self.players:
             return self.players[guild_id]
         else:
-            player = Player(self.get_voice_client(guild_id))
+            player = Player(bot=self.bot, voice_client=self.get_voice_client(guild_id))
             self.players[guild_id] = player
             return player
         
@@ -137,3 +140,10 @@ class Command(commands.Cog):
                 return guild.voice_client
 
         return None
+    
+    def get_voice_user_ids(self, guild_id):
+        vc = self.get_voice_client(guild_id)
+        if vc is None:
+            return None
+        
+        return [member.id for member in vc.channel.members if member.bot == False]
