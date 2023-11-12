@@ -30,12 +30,12 @@ class Player():
         self.playlist = playlist
 
 
-    def fill_playlist_10(self):
+    def fill_playlist_3(self):
 
         remain = self.song_remains()
         print('remain: {0}'.format(remain))
 
-        for _ in range(10 - remain):
+        for _ in range(3 - remain):
             try:
                 self.queue.append(next(self.playlist.iter))
             except StopIteration:
@@ -54,7 +54,7 @@ class Player():
         try:
             while True:
 
-                self.fill_playlist_10()
+                self.fill_playlist_3()
                 
                 song = self.get_next_song()
 
@@ -113,10 +113,10 @@ class Player():
         except IndexError:
             return None
         
-    # 次の10曲を返す
-    def next_10_songs(self):
+    # 次の3曲を返す
+    def next_3_songs(self):
         try:
-            return self.queue[self.__current_song_index + 1:self.__current_song_index + 11]
+            return self.queue[self.__current_song_index + 1:self.__current_song_index + 4]
         except IndexError:
             return self.queue[self.__current_song_index + 1:]
         

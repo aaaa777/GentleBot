@@ -86,8 +86,8 @@ class Command(commands.Cog):
         player.playlist = mixlist
         self.mix_mode = True
 
-        # 初期10曲を読み込む
-        player.fill_playlist_10()
+        # 初期3曲を読み込む
+        player.fill_playlist_3()
         print('player queue', player.queue)
 
         asyncio.create_task(player.start())
@@ -156,7 +156,7 @@ class Command(commands.Cog):
     @commands.command(name='playlist', description="show playlist", aliases=['pl'])
     async def playlist(self, ctx):
         """show playlist"""
-        await ctx.send('\n'.join(self.get_player(ctx.guild.id).queue))
+        await ctx.send('\n'.join(self.get_player(ctx.guild.id).next_10_songs()))
         await ctx.send("playlist")
 
     @commands.command(name='like', description="add likelist")
@@ -190,21 +190,7 @@ class Command(commands.Cog):
             mixlist = player.playlist
             mixlist.add_playlist(likelist)
             print('mixlist', mixlist)
-            # VCに入ったユーザ以外のユーザのLLをMixListに追加する
-            # users = self.get_voice_user_ids(member.guild.id)
-            # for user in users:
-            #     if user != member.id:
-            #         likelist = LikeList.load(user)
-            #         mixlist.add_playlist(likelist)
-            # print('mixlist', mixlist)
-            # # MixListをPlayerにセットする
-            # player = self.get_player(member.guild.id)
-            # player.set_playlist(mixlist)
-            # # Playerに10曲読み込ませる
-            # player.fill_playlist_10()
-            # print('player queue', player.queue)
-            # # Playerを再生する
-            # asyncio.create_task(player.start())
+
             await member.guild.voice_client.channel.send("added")
 
         if before.channel is not None and after.channel is None:
@@ -215,16 +201,7 @@ class Command(commands.Cog):
 
             # 抜けたユーザー
             mixlist.remove_playlist_by_user_id(member.id)
-            # users = self.get_voice_user_ids(member.guild.id)
-            # for user in users:
-            #     likelist = LikeList.load(user)
-            #     mixlist.add_playlist(likelist)
-            # print('mixlist', mixlist)
-            # # MixListをPlayerにセットする
-            # player = self.get_player(member.guild.id)
-            # player.set_playlist(mixlist)
-            # # Playerに10曲読み込ませる
-            # player.fill_playlist_10()
+
             await member.guild.voice_client.channel.send("removed")
 
     @commands.Cog.listener('on_message')
@@ -271,4 +248,4 @@ class Command(commands.Cog):
         return [member.id for member in vc.channel.members if member.bot == False]
     
     def build_dashboard_message(self, player):
-        return '<' + '>\n<'.join(player.queue) + '>'
+        return '<' + '>\n<'.join(player.next_3_songs()) + '>'
