@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from ..music.player import Player
 from ..music.likelist import LikeList
+from ..music.mixlist import MixList
 
 class Command(commands.Cog):
 
@@ -33,8 +34,10 @@ class Command(commands.Cog):
         # ボイスチャンネルに接続する
         await message.author.voice.channel.connect()
         player = self.get_player(ctx.guild.id)
-        users = self.get_voice_user_ids(ctx.guild.id)
-        player.update_users(users)
+        player.voice_client = self.get_voice_client(ctx.guild.id)
+
+        # users = self.get_voice_user_ids(ctx.guild.id)
+        # player.update_users(users)
 
         await message.channel.send("接続しました。")
 
@@ -50,7 +53,7 @@ class Command(commands.Cog):
 
         # 切断する
         await message.guild.voice_client.disconnect()
-        self.players.pop(ctx.guild.id)
+        # self.players.pop(ctx.guild.id)
         await message.channel.send("切断しました。")
 
 
@@ -59,8 +62,18 @@ class Command(commands.Cog):
         """play music"""
         player = self.get_player(ctx.guild.id)
 
+        voice_client = self.get_voice_client(ctx.guild.id)
+        if voice_client is None:
+            await self.join(ctx)
+
+        # コマンド打った人のLLを読み込む
+        mixlist = MixList()
+        likelist = LikeList.load(ctx.author.id)
+        player.set_playlist(likelist)
+
+        # 初期10曲を読み込む
         player.fill_playlist_10()
-        print(player.playlist.all_songs)
+        print('player queue', player.queue)
 
         asyncio.create_task(player.start())
         await ctx.send("play")
@@ -133,7 +146,7 @@ class Command(commands.Cog):
         if guild_id in self.players:
             return self.players[guild_id]
         else:
-            player = Player(bot=self.bot, voice_client=self.get_voice_client(guild_id))
+            player = Player(bot=self.bot, voice_client=None)
             self.players[guild_id] = player
             return player
         

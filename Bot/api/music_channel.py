@@ -27,7 +27,7 @@ class MusicChannelAPI():
         res = self.conn.select(table='music channel', where=None)
         
         if res['status'] == 'ok':
-            self.music_channel_id_list = [row['music_channel_id'] for row in res['records']]
+            self.music_channel_id_list = [int(row['music_channel_id']) for row in res['records']]
             print('music ch list loaded:', self.music_channel_id_list)
 
         return self.music_channel_id_list

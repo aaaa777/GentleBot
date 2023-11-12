@@ -36,7 +36,7 @@ class GASQL:
         }
 
         if columns:
-            params['columns'] = ','.join(columns)
+            params['cols'] = ','.join(columns)
 
         if data:
             for key, value in data.items():
