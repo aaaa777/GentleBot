@@ -42,6 +42,8 @@ class Command(commands.Cog):
         await message.channel.send("接続しました。")
 
 
+    # VCから切断するコマンド
+
     @commands.command(name='leave', description="leave voice channel", aliases=['l'])
     async def leave(self, ctx):
         """leave voice channel"""
@@ -57,6 +59,8 @@ class Command(commands.Cog):
         await message.channel.send("切断しました。")
 
 
+    # 再生コマンド
+
     @commands.command(name='play', description="play music", aliases=['p'])
     async def play(self, ctx):
         """play music"""
@@ -68,8 +72,15 @@ class Command(commands.Cog):
 
         # コマンド打った人のLLを読み込む
         mixlist = MixList()
-        likelist = LikeList.load(ctx.author.id)
-        player.set_playlist(likelist)
+        users = self.get_voice_user_ids(ctx.guild.id)
+
+        for user in users:
+            likelist = LikeList.load(user)
+            mixlist.add_playlist(likelist)
+
+        
+        #likelist = LikeList.load(ctx.author.id)
+        player.set_playlist(mixlist)
 
         # 初期10曲を読み込む
         player.fill_playlist_10()
@@ -77,6 +88,13 @@ class Command(commands.Cog):
 
         asyncio.create_task(player.start())
         await ctx.send("play")
+
+    @commands.command(name='insert', description="insert music into next queue", aliases=['i'])
+    async def insert(self, ctx, arg):
+        """insert music into next queue"""
+        player = self.get_player(ctx.guild.id)
+        player.insert_song_next(arg)
+        await ctx.send(f"insert {arg}")
 
     @commands.command(name='pause', description="pause music")
     async def pause(self, ctx):
@@ -127,11 +145,13 @@ class Command(commands.Cog):
     @commands.command(name='now', description="now playing", aliases=['np'])
     async def now(self, ctx):
         """now playing"""
+        await ctx.send(self.get_player(ctx.guild.id).get_current_song())
         await ctx.send("now")
 
     @commands.command(name='playlist', description="show playlist", aliases=['pl'])
     async def playlist(self, ctx):
         """show playlist"""
+        await ctx.send('\n'.join(self.get_player(ctx.guild.id).queue))
         await ctx.send("playlist")
 
     @commands.command(name='like', description="add likelist")

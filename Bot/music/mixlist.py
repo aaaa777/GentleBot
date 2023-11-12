@@ -22,20 +22,22 @@ class MixList(PlayList):
         for playlist_index in range(len(self.playlists)):
 
             # playlistのindexを取得する
-            turn_index = self.__playlist_cursol + playlist_index % len(self.playlists)
+            turn_index = (self.__playlist_cursol + playlist_index) % len(self.playlists)
 
             # playlistの中身を取り出す
             playlist_iter = self.playlists[turn_index].iter
             song = next(playlist_iter)
 
-            if song is not None:
-                self.playlist.push(song)
-                return song
+            if song is None:
+                continue
+
+            self.all_songs.append(song)
             
             self.__playlist_cursol += 1
-            self.__playlist_cursol %= len(self.users)
+            self.__playlist_cursol %= len(self.playlists)
 
-            print('playlist stat:', self.playlist.all_songs)
+            print('playlist stat:', self.all_songs)
+            return song
             
         return None
 

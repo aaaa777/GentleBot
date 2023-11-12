@@ -16,7 +16,9 @@ class Player():
         self.bot = bot
         self.users = []
         self.queue = []
+        self.repeat_mode = False
         self.voice_client = voice_client
+        self.skip_flag = False
         # self.__user_likelists = {}
         # self.__playlist = None
         # self.__current_user_index = 0
@@ -67,24 +69,29 @@ class Player():
                 print('no song remains, player stopped')
                 break
             
-            # self.__now_playing_coroutine = asyncio.create_task(vc.play(song))
-            # vc.play(song)
+            while True:
 
-            print('playing: {0}, queue: {1}, playlist: {2}'.format(song, str(self.queue), str(self.playlist.all_songs)))
-            await asyncio.sleep(1)
-            print('playing: {0}'.format(song))
-            
-            ytdl_player = await YTDLSource.from_url_via_file_stream(song, loop=self.bot.loop)
-            # ytdl_player = await YTDLSource.from_url(song, loop=self.bot.loop, stream=True)
-            if self.voice_client is None:
-                raise ValueError('voice_client is None')
-            
-            self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
-            # self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
-
-            while self.voice_client.is_playing():
+                print('playing: {0}, queue: {1}, playlist: {2}'.format(song, str(self.queue), str(self.playlist.all_songs)))
                 await asyncio.sleep(1)
-            print('song ended')
+                print('playing: {0}'.format(song))
+
+                ytdl_player = await YTDLSource.from_url_via_file_stream(song, loop=self.bot.loop)
+                # ytdl_player = await YTDLSource.from_url(song, loop=self.bot.loop, stream=True)
+                if self.voice_client is None:
+                    raise ValueError('voice_client is None')
+            
+                self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
+                # self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
+
+                # 再生が終わるまでの待ち判定
+                while self.voice_client.is_playing():
+                    await asyncio.sleep(1)
+                print('song ended')
+
+                # リピートモードの場合はsongをそのままにして再生
+                if not self.repeat_mode:
+                    print('repeat mode enabled, play again')
+                    break
 
         print('play_loop ended')
         self.reset_cursor()
@@ -98,15 +105,41 @@ class Player():
             return self.queue[self.__current_song_index]
         except IndexError:
             return None
+        
+    def get_current_song(self):
+        if self.__current_song_index < 0:
+            return None
+        try:
+            return self.queue[self.__current_song_index]
+        except IndexError:
+            return None
+        
+    # 割り込みで次の曲に挿入する
+    def insert_song_next(self, song):
+        self.queue.insert(self.__current_song_index + 1, song)
+        print('queue: {0}'.format(str(self.queue)))
 
+    # queue内残り曲数を返す
     def song_remains(self):
         return len(self.queue) - self.__current_song_index - 1
     
+    # queueのインデックスをリセットする
     def reset_cursor(self):
         self.__current_song_index = -1
     
     def pause(self):
-        pass
+        vc = self.voice_client
+        if vc is None:
+            return
+        if vc.is_playing():
+            vc.pause()
+
+    def unpause(self):
+        vc = self.voice_client
+        if vc is None:
+            return
+        if vc.is_paused():
+            vc.resume()
 
     def skip(self):
         vc = self.voice_client
@@ -119,7 +152,10 @@ class Player():
             self.next_song()
 
     def repeat(self):
-        pass
+        self.repeat_mode = True
+
+    def unrepeat(self):
+        self.repeat_mode = False
 
     def shuffle(self):
         pass

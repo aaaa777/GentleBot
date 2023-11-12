@@ -3,6 +3,7 @@
 import asyncio
 import discord
 import os
+import re
 
 from subprocess import run, PIPE, Popen, DEVNULL, STDOUT, CalledProcessError, TimeoutExpired
 from yt_dlp import YoutubeDL
@@ -10,6 +11,7 @@ from discord.ext import commands
 
 # Suppress noise about console usage from errors
 #YoutubeDL.utils.bug_reports_message = lambda: ''
+max_volume_re = re.compile(r"max_volume: (-?\d+\.\d+) dB")
 
 outtmpl = '%(extractor)s-%(id)s.%(ext)s'
 
@@ -85,6 +87,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         print('downloading into', filename)
 
+
         # 一時ファイルのpipeを取得
         # 10秒間ダウンロードが進まなかったらタイムアウト
         f = None
@@ -107,10 +110,16 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         if f is None:
             return None
+        
+        # 音量を取得
+        volume = await cls.get_volume(f)
+        print(f'volume gain: {volume} -> {-volume} dB')
+
+        f.seek(0)
 
         # ffmpegでエンコード
         print('encoding with ffmpeg')
-        return cls(discord.FFmpegPCMAudio(f, **ffmpeg_options), data=data)
+        return cls(discord.FFmpegPCMAudio(f, **cls.ffmpeg_options(volume=-volume)), data=data)
     
     @classmethod
     async def download_metadata(cls, url, *, loop=None):
@@ -143,3 +152,34 @@ class YTDLSource(discord.PCMVolumeTransformer):
         ytdl_result = loop.run_in_executor(None, lambda: run([command, *args, url],))
         
         return ytdl_result
+
+    # 前30秒の音量を取得する
+    @classmethod
+    async def get_volume(self, file):
+        command = 'ffmpeg'
+        args = [
+            '-i', '-',
+            '-t', '30',
+            '-vn',
+            '-af', 'volumedetect',
+            '-f', 'null', '-'
+        ]
+
+        # ffmpegの実行
+        loop = asyncio.get_event_loop()
+        ffmpeg_result = await loop.run_in_executor(None, lambda: run([command, *args], stdin=file, stdout=PIPE, stderr=STDOUT, timeout=10))
+        out = ffmpeg_result.stdout.decode("utf8")
+        
+        # 音量を取得
+        print(out)
+        match = max_volume_re.search(out)
+        a, b = match.group(1), float(match.group(1))
+        return float(match.group(1)) if match else 0.0
+    
+    @classmethod
+    def ffmpeg_options(cls, volume=0.0):
+        return {
+            'options': f'-af volume={volume}dB',
+            'pipe': True,
+        }
+

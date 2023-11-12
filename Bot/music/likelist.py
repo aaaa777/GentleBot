@@ -19,6 +19,7 @@ class LikeList(PlayList):
         # self.all_songs初期化後に実行
         self.fetch_all_songs()
         print('likelist init: {0}'.format(self.all_songs))
+        self.shuffle()
 
     @classmethod
     def load(cls, user_id):
