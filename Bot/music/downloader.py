@@ -62,7 +62,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
     
     @classmethod
     async def from_url_via_file_stream(cls, url, *, loop=None):
-        data = await cls.download_metadata(url)
+        try:
+            data = await cls.download_metadata(url)
+        except:
+            raise Exception('download metadata failed')
 
         # TODO: プレイリストやプロバイダ毎の処理をここに書く
 
@@ -143,8 +146,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             # 'quiet':,
             # 'no_warnings':,
             '--default-search', 'auto',
-            #'--source-address', '0.0.0.0', 
-            '--no-playlist',
+            #'--source-address', '0.0.0.0',
         ]
 
         #ytdl_result = run([command, *args, url])
@@ -159,7 +161,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
         command = 'ffmpeg'
         args = [
             '-i', '-',
-            '-t', '30',
             '-vn',
             '-af', 'volumedetect',
             '-f', 'null', '-'

@@ -26,7 +26,7 @@ class ChannelObserver(commands.Cog):
         for url in url_list:
             self.save_like_song(message.author.id, url)
         
-        message.add_reaction('♥️')
+        await message.add_reaction('♥️')
 
     def save_like_song(self, user_id, song):
         LikeList.load(user_id).add_song(song)

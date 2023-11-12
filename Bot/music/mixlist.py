@@ -15,6 +15,10 @@ class MixList(PlayList):
     def remove_playlist_by_index(self, index):
         del self.playlists[index]
 
+    def remove_playlist_by_user_id(self, user_id):
+        for playlist in self.playlists:
+            if playlist.user_id == user_id:
+                self.remove_playlist(playlist)
     
 
     def next_song_roundrobin(self):

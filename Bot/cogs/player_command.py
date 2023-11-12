@@ -13,6 +13,9 @@ class Command(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.players = {}
+        self.mix_mode = False
+
+        self.music_dashboard_message = None
 
 
     @commands.command(name='hello', description="Says hello", aliases=['hi', 'hey'])
@@ -70,7 +73,7 @@ class Command(commands.Cog):
         if voice_client is None:
             await self.join(ctx)
 
-        # コマンド打った人のLLを読み込む
+        # コマンド打った時のLLを読み込む
         mixlist = MixList()
         users = self.get_voice_user_ids(ctx.guild.id)
 
@@ -80,14 +83,16 @@ class Command(commands.Cog):
 
         
         #likelist = LikeList.load(ctx.author.id)
-        player.set_playlist(mixlist)
+        player.playlist = mixlist
+        self.mix_mode = True
 
         # 初期10曲を読み込む
         player.fill_playlist_10()
         print('player queue', player.queue)
 
         asyncio.create_task(player.start())
-        await ctx.send("play")
+        self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
+        # await ctx.send("play")
 
     @commands.command(name='insert', description="insert music into next queue", aliases=['i'])
     async def insert(self, ctx, arg):
@@ -161,6 +166,83 @@ class Command(commands.Cog):
 
         await ctx.send("like")
 
+    # VCに新しいユーザが入った時に呼ばれる
+    @commands.Cog.listener('on_voice_state_update')
+    async def on_voice_state_update(self, member, before, after):
+        if not self.mix_mode:
+            return
+        
+        print('mixmode: on_voice_state_update')
+        print('member', member)
+        print('before', before)
+        print('after', after)
+
+        player = self.get_player(member.guild.id)
+
+        if before.channel is None and after.channel is not None:
+            print('join')
+            # VCに新しいユーザが入った時
+            # VCに入ったユーザのLLを読み込む
+            likelist = LikeList.load(member.id)
+            print('likelist', likelist.all_songs)
+            print('likelist', likelist)
+            # VCに入ったユーザのLLをMixListに追加する
+            mixlist = player.playlist
+            mixlist.add_playlist(likelist)
+            print('mixlist', mixlist)
+            # VCに入ったユーザ以外のユーザのLLをMixListに追加する
+            # users = self.get_voice_user_ids(member.guild.id)
+            # for user in users:
+            #     if user != member.id:
+            #         likelist = LikeList.load(user)
+            #         mixlist.add_playlist(likelist)
+            # print('mixlist', mixlist)
+            # # MixListをPlayerにセットする
+            # player = self.get_player(member.guild.id)
+            # player.set_playlist(mixlist)
+            # # Playerに10曲読み込ませる
+            # player.fill_playlist_10()
+            # print('player queue', player.queue)
+            # # Playerを再生する
+            # asyncio.create_task(player.start())
+            await member.guild.voice_client.channel.send("added")
+
+        if before.channel is not None and after.channel is None:
+            print('leave')
+            # VCからユーザが抜けた時
+            # VCにいるユーザのLLをMixListに追加する
+            mixlist = player.playlist
+
+            # 抜けたユーザー
+            mixlist.remove_playlist_by_user_id(member.id)
+            # users = self.get_voice_user_ids(member.guild.id)
+            # for user in users:
+            #     likelist = LikeList.load(user)
+            #     mixlist.add_playlist(likelist)
+            # print('mixlist', mixlist)
+            # # MixListをPlayerにセットする
+            # player = self.get_player(member.guild.id)
+            # player.set_playlist(mixlist)
+            # # Playerに10曲読み込ませる
+            # player.fill_playlist_10()
+            await member.guild.voice_client.channel.send("removed")
+
+    @commands.Cog.listener('on_message')
+    async def on_message(self, message):
+        if message.author.id == self.bot.user.id:
+            return
+        
+        vc = self.get_voice_client(message.guild.id)
+        if not vc or message.channel.id != vc.channel.id:
+            return
+        
+        if self.music_dashboard_message:
+            await self.music_dashboard_message.delete()
+
+        self.music_dashboard_message = await message.channel.send(self.build_dashboard_message(self.get_player(message.guild.id)))
+
+
+    # Utility
 
     def get_player(self, guild_id):
         if guild_id in self.players:
@@ -186,5 +268,7 @@ class Command(commands.Cog):
         vc = self.get_voice_client(guild_id)
         if vc is None:
             return None
-        
         return [member.id for member in vc.channel.members if member.bot == False]
+    
+    def build_dashboard_message(self, player):
+        return '<' + '>\n<'.join(player.queue) + '>'

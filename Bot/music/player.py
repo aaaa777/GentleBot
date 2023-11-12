@@ -51,51 +51,50 @@ class Player():
     
     async def play_loop(self):
         print('play_loop started')
-        # vc = self.voice_client
-        while True:
-            # if vc.is_playing():
-            #     await asyncio.sleep(1)
-            #     continue
-
-            self.fill_playlist_10()
-            if False:
-                print('cant add playlist no song remains')
-                break
-            
-            song = self.get_next_song()
-            # song = self.next_song()
-
-            if song is None:
-                print('no song remains, player stopped')
-                break
-            
+        try:
             while True:
 
-                print('playing: {0}, queue: {1}, playlist: {2}'.format(song, str(self.queue), str(self.playlist.all_songs)))
-                await asyncio.sleep(1)
-                print('playing: {0}'.format(song))
+                self.fill_playlist_10()
+                
+                song = self.get_next_song()
 
-                ytdl_player = await YTDLSource.from_url_via_file_stream(song, loop=self.bot.loop)
-                # ytdl_player = await YTDLSource.from_url(song, loop=self.bot.loop, stream=True)
-                if self.voice_client is None:
-                    raise ValueError('voice_client is None')
-            
-                self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
-                # self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
-
-                # 再生が終わるまでの待ち判定
-                while self.voice_client.is_playing():
-                    await asyncio.sleep(1)
-                print('song ended')
-
-                # リピートモードの場合はsongをそのままにして再生
-                if not self.repeat_mode:
-                    print('repeat mode enabled, play again')
+                if song is None:
+                    print('no song remains, player stopped')
                     break
+                
+                # repeat loop
+                while True:
+                    
+                    print('playing: {0}, queue: {1}, playlist: {2}'.format(song, str(self.queue), str(self.playlist.all_songs)))
 
-        print('play_loop ended')
-        self.reset_cursor()
-        self.playing_coroutine = None
+                    try:
+                        ytdl_player = await YTDLSource.from_url_via_file_stream(song, loop=self.bot.loop)
+                    except Exception as e:
+                        # 一つの動画ダウンロードに失敗した場合スキップする
+                        break
+                    
+                    # vcが無くなった場合、直ちに再生を終了する
+                    if self.voice_client is None:
+                        raise ValueError('voice_client is None')
+                
+                    self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
+
+                    # 再生が終わるまでの待ち判定
+                    while self.voice_client.is_playing():
+                        await asyncio.sleep(1)
+                    print('song ended')
+
+                    # リピートモードの場合はsongをそのままにして再生
+                    if not self.repeat_mode:
+                        print('repeat mode enabled, play again')
+                        break
+        except:
+            return
+        finally:
+            print('play_loop ended')
+            self.reset_cursor()
+            self.playing_coroutine = None
+
         await self.send_playlist_ended()
 
 
@@ -113,6 +112,13 @@ class Player():
             return self.queue[self.__current_song_index]
         except IndexError:
             return None
+        
+    # 次の10曲を返す
+    def next_10_songs(self):
+        try:
+            return self.queue[self.__current_song_index + 1:self.__current_song_index + 11]
+        except IndexError:
+            return self.queue[self.__current_song_index + 1:]
         
     # 割り込みで次の曲に挿入する
     def insert_song_next(self, song):
