@@ -39,21 +39,3 @@ class LikeList(PlayList):
         self.all_songs = self.likelist_api.get_all_songs()
 
     
-    # def __iter__(self):
-    #     return self
-    
-    # def __next__(self):
-    #     self.current_song_index += 1
-
-    #     if self.current_song_index >= len(self.songs):
-    #         self.current_song_index -= 1
-    #         raise StopIteration
-        
-    #     return self.songs[self.current_song_index]
-
-    # def next(self):
-    #     try:
-    #         return self.__next__()
-    #     except StopIteration:
-    #         return None
-    

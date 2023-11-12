@@ -3,6 +3,7 @@ import re
 
 from ..api.music_channel import MusicChannelAPI
 from ..music.likelist import LikeList
+from ..music.song import Song
 
 class ChannelObserver(commands.Cog):
 
@@ -28,8 +29,8 @@ class ChannelObserver(commands.Cog):
         
         await message.add_reaction('♥️')
 
-    def save_like_song(self, user_id, song):
-        LikeList.load(user_id).add_song(song)
+    def save_like_song(self, user_id, url):
+        LikeList.load(user_id).add_song(Song(url=url))
 
     @commands.Cog.listener('on_raw_reaction_add')
     async def on_reaction_add(self, event):

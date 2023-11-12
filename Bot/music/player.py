@@ -7,7 +7,7 @@ from Bot.music.downloader import YTDLSource
 
 from .playlist import PlayList
 from .likelist import LikeList
-from ..api.likelist import LikeListAPI
+from .song import Song
 
 class Player():
     
@@ -37,7 +37,8 @@ class Player():
 
         for _ in range(3 - remain):
             try:
-                self.queue.append(next(self.playlist.iter))
+                song = next(self.playlist.iter)
+                self.queue.append(song)
             except StopIteration:
                 break
 
@@ -55,7 +56,7 @@ class Player():
             while True:
 
                 self.fill_playlist_3()
-                
+
                 song = self.get_next_song()
 
                 if song is None:

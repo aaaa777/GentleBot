@@ -1,5 +1,6 @@
 import os
 from .gasql import GASQL
+from ..music.song import Song
 
 class LikeListAPI():
     def __init__(self, user_id):
@@ -15,13 +16,13 @@ class LikeListAPI():
         res = self.conn.select(table='likelist', where={'w_col': 'user_id', 'w_op': '=', 'w_val': self.user_id})
         
         if res['status'] == 'ok':
-            self.songs = [row['url'] for row in res['records']]
+            self.songs = [Song(url=row['url']) for row in res['records']]
             print('likelist loaded:', self.songs)
 
         return self.songs
     
-    def add_song(self, song):
-        res = self.conn.insert(table='likelist', data={'user_id': self.user_id, 'url': song})
+    def add_song(self, song: Song):
+        res = self.conn.insert(table='likelist', data={'user_id': self.user_id, 'url': song.url})
         if res['status'] == 'ok':
             self.songs.append(song)
             print('likelist added:', song)

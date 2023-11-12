@@ -6,6 +6,7 @@ from discord.ext import commands
 from ..music.player import Player
 from ..music.likelist import LikeList
 from ..music.mixlist import MixList
+from ..music.song import Song
 
 class Command(commands.Cog):
 
@@ -98,7 +99,7 @@ class Command(commands.Cog):
     async def insert(self, ctx, arg):
         """insert music into next queue"""
         player = self.get_player(ctx.guild.id)
-        player.insert_song_next(arg)
+        player.insert_song_next(Song(url=arg))
         await ctx.send(f"insert {arg}")
 
     @commands.command(name='pause', description="pause music")
@@ -248,4 +249,4 @@ class Command(commands.Cog):
         return [member.id for member in vc.channel.members if member.bot == False]
     
     def build_dashboard_message(self, player):
-        return '<' + '>\n<'.join(player.next_3_songs()) + '>'
+        return '<' + '>\n<'.join([str(s) for s in player.next_3_songs()]) + '>'

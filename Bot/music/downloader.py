@@ -46,25 +46,27 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.title = data.get('title')
         self.url = data.get('url')
 
-    @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        await cls.download_metadata(url)
+    # @classmethod
+    # async def from_url(cls, url, *, loop=None, stream=False):
+    #     await cls.download_metadata(url)
 
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-        print(data['url'])
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
+    #     loop = loop or asyncio.get_event_loop()
+    #     data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+    #     print(data['url'])
+    #     if 'entries' in data:
+    #         # take first item from a playlist
+    #         data = data['entries'][0]
 
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+    #     filename = data['url'] if stream else ytdl.prepare_filename(data)
+    #     return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
     
     @classmethod
-    async def from_url_via_file_stream(cls, url, *, loop=None):
+    async def from_url_via_file_stream(cls, song, *, loop=None):
         try:
-            data = await cls.download_metadata(url)
-        except:
+            # data = await cls.download_metadata(url)
+            data = await song.download_metadata()
+        except Exception as e:
+            print(e)
             raise Exception('download metadata failed')
 
         # TODO: プレイリストやプロバイダ毎の処理をここに書く
@@ -86,7 +88,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             os.remove(f'tmp/{filename_part}')
 
         # yt-dlpのダウンロード処理を実行
-        res = cls.download_with_ytdl(url)
+        res = cls.download_with_ytdl(song.url)
 
         print('downloading into', filename)
 
