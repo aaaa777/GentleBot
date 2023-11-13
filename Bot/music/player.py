@@ -30,7 +30,7 @@ class Player():
         self.playlist = playlist
 
 
-    def fill_playlist_3(self):
+    async def fill_playlist_3(self):
 
         remain = self.song_remains()
         print('remain: {0}'.format(remain))
@@ -38,6 +38,7 @@ class Player():
         for _ in range(3 - remain):
             try:
                 song = next(self.playlist.iter)
+                await song.download_metadata()
                 self.queue.append(song)
             except StopIteration:
                 break
@@ -55,7 +56,7 @@ class Player():
         try:
             while True:
 
-                self.fill_playlist_3()
+                await self.fill_playlist_3()
 
                 song = self.get_next_song()
 
@@ -89,7 +90,8 @@ class Player():
                     if not self.repeat_mode:
                         print('repeat mode enabled, play again')
                         break
-        except:
+        except Exception as e:
+            print(e)
             return
         finally:
             print('play_loop ended')

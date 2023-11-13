@@ -88,8 +88,8 @@ class Command(commands.Cog):
         self.mix_mode = True
 
         # 初期3曲を読み込む
-        player.fill_playlist_3()
-        print('player queue', player.queue)
+        # await player.fill_playlist_3()
+        # print('player queue', player.queue)
 
         asyncio.create_task(player.start())
         self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))

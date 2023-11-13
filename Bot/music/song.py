@@ -57,4 +57,4 @@ class Song:
         return self.metadata_cache[url]
 
     def __str__(self):
-        return f'{self.title} - {self.duration // 60}:{self.duration % 60:02d}'
+        return f'{self.title} - {self.duration // 60}:{(int)(self.duration % 60):02d}'
