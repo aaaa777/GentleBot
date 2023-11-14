@@ -27,6 +27,8 @@ class Song:
     metadata_cache = {}
 
     def __init__(self, url: str, start_time: int=None, end_time: int=None, music_type: str=None):
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, lambda: self.download_metadata())
         # metadata_cor = self.download_metadata()
         # self.metadata_cor = metadata_cor
         self.url = url
@@ -55,6 +57,9 @@ class Song:
         self.like_count = metadata['like_count'] if 'like_count' in metadata else None
         self.metadata_cache[url] = ytdl.extract_info(url, download=False)
         return self.metadata_cache[url]
+    
+    # async def await_data(self):
+    #     await self.metadata_cor
 
     def __str__(self):
         return f'{self.title} - {self.duration // 60}:{(int)(self.duration % 60):02d}'

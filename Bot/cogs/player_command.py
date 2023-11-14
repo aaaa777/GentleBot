@@ -1,3 +1,6 @@
+import os
+import sys
+
 import asyncio
 import discord
 from discord import app_commands
@@ -166,10 +169,19 @@ class Command(commands.Cog):
 
         await ctx.send("like")
 
+    @commands.command(name='reboot', description="reboot")
+    async def reboot(self, ctx):
+        """reboot"""
+        await ctx.send("reboot")
+        await self.leave(ctx)
+        os.execv(sys.executable, ['python'] + sys.argv)
+
     # VCに新しいユーザが入った時に呼ばれる
     @commands.Cog.listener('on_voice_state_update')
     async def on_voice_state_update(self, member, before, after):
         if not self.mix_mode:
+            return
+        if member.bot:
             return
         
         print('mixmode: on_voice_state_update')
@@ -249,3 +261,13 @@ class Command(commands.Cog):
     
     def build_dashboard_message(self, player):
         return '<' + '>\n<'.join([str(s) for s in player.next_3_songs()]) + '>'
+    
+
+    async def update_dashboard_loop(self):
+        while True:
+            await self.bot.change_presence(activity=discord.Game(name='music'))
+            self.music_dashboard_message = await self.music_dashboard_message.edit(content=self.build_dashboard_message(self.get_player(self.music_dashboard_message.guild.id)))
+            await asyncio.sleep(10)
+
+    async def post_dashboard(self, player: Player):
+        await player.voice_client.channel.send(self.build_dashboard_message(self.get_player(player.voice_client.guild.id)))
