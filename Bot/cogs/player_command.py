@@ -157,8 +157,7 @@ class Command(commands.Cog):
     @commands.command(name='playlist', description="show playlist", aliases=['pl'])
     async def playlist(self, ctx):
         """show playlist"""
-        await ctx.send('\n'.join(self.get_player(ctx.guild.id).next_10_songs()))
-        await ctx.send("playlist")
+        await ctx.send('\n'.join(self.get_player(ctx.guild.id).next_3_songs()))
 
     @commands.command(name='like', description="add likelist")
     async def like(self, ctx, arg):
