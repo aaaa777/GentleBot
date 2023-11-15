@@ -115,7 +115,7 @@ class Command(commands.Cog):
 
             asyncio.create_task(player.start())
             self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
-            # await ctx.send("play")
+            await ctx.response.send_message("play")
         except:
             await ctx.response.send_message("エラーが発生しました。")
 
