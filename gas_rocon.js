@@ -215,8 +215,18 @@ function addFlightRecord(table, col_dict) {
     }
 
 
-    new_row[1] = Utilities.parseDate(new_row[1], "JST", "dd MMM yyyy")
-    let new_date = new_row[1].toDateString()
+    let date = Utilities.parseDate(new_row[1] + " " + new_row[5], "GMT", "dd MMM yyyy HH:mm");
+    // GMT+9に変換
+    // date.setTime(date.getTime() + 9 * 60 * 60 * 1000);
+
+    // let new_date = Intl.DateTimeFormat('ja-JP').format(date);
+    let new_date = date.getFullYear() + "/" + (date.getMonth() + 1) + "/" + date.getDate() + " " + Utilities.formatDate(date, "JST", "EEE");
+    let new_time = date.getHours() + ":" + Utilities.formatDate(date, "JST", "mm");
+
+    new_row[1] = new_date;
+    new_row[5] = new_time;
+    // new_row[1] = Utilities.parseDate(new_row[1], "GMT", "dd MMM yyyy")
+    // let new_date = new_row[1].toDateString()
     // 一行目だった時だけ重複処理しない
     if(last_row > 1)
     {
@@ -224,9 +234,10 @@ function addFlightRecord(table, col_dict) {
       let sheet_values = sheet.getRange(2, 1, last_row - 1, last_col).getValues();
       for(let i = 0; i < sheet_values.length; i++) {
           let row = sheet_values[i];
-          let row_date = row[1].toDateString()
+          let row_date = row[1]//.toDateString()
+          let row_time = row[5].getHours() + ":" + Utilities.formatDate(row[5], "JST", "mm");
           if(new_row.length < 3) return; // date, flightがない場合は無視
-          if(row[2] == new_row[2] && row_date == new_date) {
+          if(row[2] == new_row[2] && row_date == new_date && row_time == new_time) {
               return;
           }
       }
@@ -244,24 +255,67 @@ function fetchFlightData() {
 
     var $ = Cheerio.load(html);
 
-    response
+    // get flight data
+    let flight_data = $("table tbody tr");
+    flight_data.each(function(i, elem) {
+        let record = {};
+        let tds = $(this).find("td");
+        record['id'] = Utilities.getUuid(); // id
+        record['date'] = $(tds[2]).text().trim(); // date
+        record['flight'] = $(tds[5]).text().trim(); // flight
+        record['from'] = $(tds[3]).text().trim(); // from
+        record['to'] = $(tds[4]).text().trim(); // to
+        record['std'] = $(tds[7]).text().trim(); // std
+        records.push(record);
+    });
 
-    let json = JSON.parse(response.getContentText().replace(/^[^{]+/, ""));
-    let flight_data = json["full_count"];
-    let flight_records = json["aircraft"];
-    let flight_record_list = [];
-    for(let key in flight_records) {
-        let record = flight_records[key];
-        let flight_record = {
-            "id": record[0],
-            "date": new Date(record[10] * 1000),
-            "flight": record[16],
-            "from": record[11],
-            "to": record[12],
-        }
-        flight_record_list.push(flight_record);
+    return records.reverse();
+}
+
+// 未来分を推測する
+function predictFlightData() {
+    let sheet = getSheet("飛行履歴");
+    let last_row = sheet.getLastRow();
+    let last_col = sheet.getLastColumn();
+    let sheet_values = sheet.getRange(2, 1, last_row - 1, last_col).getValues();
+
+    let last_date = sheet_values[sheet_values.length - 1][1];
+    // 最新日は除外する
+    let records = sheet_values.filter(record => record['date'] != last_date);
+
+    return records;
+}
+
+
+// run daily scheduled script
+function runDailyScheduledScript() {
+    updateFlightData();
+}
+
+// test predict flight data
+function testPredictFlightData() {
+    let testData = predictFlightData();
+    debugger;
+}
+
+// update flight data
+function updateFlightData() {
+    let records = fetchFlightData();
+    for(let i = 0; i < records.length; i++) {
+        addFlightRecord("飛行履歴", records[i]);
     }
-    return flight_record_list;
+}
+
+// test update flight data
+function testUpadteFlightData() {
+    updateFlightData();
+    debugger;
+}
+
+// test fetch flight data
+function testFetchFlightData() {
+    let testData = fetchFlightData();
+    debugger;
 }
 
 // test function
