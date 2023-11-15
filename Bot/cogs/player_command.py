@@ -18,9 +18,15 @@ class Command(commands.Cog):
         self.bot = bot
         self.players = {}
         self.mix_mode = False
+        self.updating_dashboard = False
 
         self.music_dashboard_message = None
 
+    @commands.Cog.listener('on_ready')
+    async def on_ready(self):
+        print('on_ready')
+        await self.setup()
+        asyncio.create_task(self.update_dashboard_loop())
 
     @commands.command(name='hello', description="Says hello", aliases=['hi', 'hey'])
     async def hello(self, ctx):
@@ -62,6 +68,10 @@ class Command(commands.Cog):
 
         # 切断する
         await message.guild.voice_client.disconnect()
+
+        msg = self.music_dashboard_message
+        self.music_dashboard_message = None
+        await msg.delete()
         # self.players.pop(ctx.guild.id)
         await message.channel.send("切断しました。")
 
@@ -203,7 +213,7 @@ class Command(commands.Cog):
             mixlist.add_playlist(likelist)
             print('mixlist', mixlist)
 
-            await member.guild.voice_client.channel.send("added")
+            # await member.guild.voice_client.channel.send("added")
 
         if before.channel is not None and after.channel is None:
             print('leave')
@@ -214,7 +224,7 @@ class Command(commands.Cog):
             # 抜けたユーザー
             mixlist.remove_playlist_by_user_id(member.id)
 
-            await member.guild.voice_client.channel.send("removed")
+            # await member.guild.voice_client.channel.send("removed")
 
     @commands.Cog.listener('on_message')
     async def on_message(self, message):
@@ -263,11 +273,23 @@ class Command(commands.Cog):
         return '<' + '>\n<'.join([str(s) for s in player.next_3_songs()]) + '>'
     
 
-    async def update_dashboard_loop(self):
-        while True:
-            await self.bot.change_presence(activity=discord.Game(name='music'))
-            self.music_dashboard_message = await self.music_dashboard_message.edit(content=self.build_dashboard_message(self.get_player(self.music_dashboard_message.guild.id)))
-            await asyncio.sleep(10)
+    async def update_dashboard_loop(self, recursive_count=0):
+        if self.updating_dashboard or recursive_count > 3:
+            return
+        self.updating_dashboard = True
+        try:
+            while True:
+                await self.bot.change_presence(activity=discord.Game(name='music'))
+                if self.music_dashboard_message:
+                    self.music_dashboard_message = await self.music_dashboard_message.edit(content=self.build_dashboard_message(self.get_player(self.music_dashboard_message.guild.id)))
+                await asyncio.sleep(10)
+        except Exception as e:
+            print(e)
+            self.updating_dashboard = False
+            await self.update_dashboard_loop(recursive_count=recursive_count+1)
 
     async def post_dashboard(self, player: Player):
         await player.voice_client.channel.send(self.build_dashboard_message(self.get_player(player.voice_client.guild.id)))
+
+    async def setup(self):
+        await self.bot.tree.sync()
