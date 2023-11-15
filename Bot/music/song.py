@@ -1,6 +1,6 @@
 import asyncio
 import json
-from subprocess import Popen, PIPE, DEVNULL
+from subprocess import Popen, PIPE, DEVNULL, STDOUT
 from yt_dlp import YoutubeDL
 
 ytdl_format_options = {
@@ -68,7 +68,7 @@ class Song:
             return
         if url in self.metadata_cache:
             return self.metadata_cache[url]
-        self.proc = Popen(['yt-dlp', '--dump-json', '--format', 'bestaudio/best', url], stdout=PIPE, stderr=DEVNULL)
+        self.proc = Popen(['yt-dlp', '--dump-json', '--format', 'bestaudio/best', url], stdout=PIPE, stderr=STDOUT)
 
     def get_download_metadata(self):
         if self.proc is None:
