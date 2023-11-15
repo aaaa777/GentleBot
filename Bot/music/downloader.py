@@ -62,12 +62,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     
     @classmethod
     async def from_url_via_file_stream(cls, song, *, loop=None):
-        try:
-            # data = await cls.download_metadata(url)
-            data = await song.download_metadata()
-        except Exception as e:
-            print(e)
-            raise Exception('download metadata failed')
+        print('from_url_via_file_stream: {0}'.format(str(song)))
+        data = song.metadata
 
         # TODO: プレイリストやプロバイダ毎の処理をここに書く
 

@@ -3,6 +3,7 @@ import sys
 
 import asyncio
 import discord
+from discord import Interaction
 from discord import app_commands
 from discord.ext import commands
 
@@ -24,162 +25,173 @@ class Command(commands.Cog):
 
     @commands.Cog.listener('on_ready')
     async def on_ready(self):
-        print('on_ready')
-        await self.setup()
+        print('music on_ready')
         asyncio.create_task(self.update_dashboard_loop())
 
-    @commands.command(name='hello', description="Says hello", aliases=['hi', 'hey'])
-    async def hello(self, ctx):
+    @app_commands.command(name='hello', description="Says hello")
+    async def hello(self, ctx: Interaction):
         """Says hello"""
-        await ctx.send("hello")
+        # await ctx.send("hello")
+        await ctx.response.send_message("hello")
 
 
-    @commands.command(name='join', description="join voice channel", aliases=['j'])
-    async def join(self, ctx):
+    @app_commands.command(name='join', description="join voice channel")
+    async def join(self, ctx: Interaction):
         """join voice channel"""
+        try:
+            # コマンドを実行したメンバーがボイスチャンネルに接続しているか確認する
+            author = ctx.user
+            # if author.voice is None:
+            # ボイスチャンネルに接続する
+            if self.join_voice_chat(author) is False:
+                await ctx.response.send_message("あなたはボイスチャンネルに接続していません。")
+                return
+            
 
-        # コマンドを実行したメンバーがボイスチャンネルに接続しているか確認する
-        message = ctx.message
-        if message.author.voice is None:
-            await message.channel.send("あなたはボイスチャンネルに接続していません。")
-            return
-        
-        # ボイスチャンネルに接続する
-        await message.author.voice.channel.connect()
-        player = self.get_player(ctx.guild.id)
-        player.voice_client = self.get_voice_client(ctx.guild.id)
+            # users = self.get_voice_user_ids(ctx.guild.id)
+            # player.update_users(users)
 
-        # users = self.get_voice_user_ids(ctx.guild.id)
-        # player.update_users(users)
+            await ctx.response.send_message("接続しました。")
+        except:
+            await ctx.response.send_message("エラーが発生しました。")
 
-        await message.channel.send("接続しました。")
-
+    async def join_voice_chat(self, user: discord.Member):
+        if user.voice is None:
+            return False
+        await user.voice.channel.connect()
+        player = self.get_player(user.guild.id)
+        player.voice_client = self.get_voice_client(user.guild.id)
+        return True
 
     # VCから切断するコマンド
 
-    @commands.command(name='leave', description="leave voice channel", aliases=['l'])
+    @app_commands.command(name='leave', description="leave voice channel")
     async def leave(self, ctx):
         """leave voice channel"""
         
-        message = ctx.message
-        if message.guild.voice_client is None:
-            await message.channel.send("接続していません。")
+        guild = ctx.guild
+        if guild.voice_client is None:
+            await ctx.response.send_message("接続していません。")
             return
 
         # 切断する
-        await message.guild.voice_client.disconnect()
+        await guild.voice_client.disconnect()
 
         msg = self.music_dashboard_message
         self.music_dashboard_message = None
         await msg.delete()
         # self.players.pop(ctx.guild.id)
-        await message.channel.send("切断しました。")
+        await ctx.response.send_message("切断しました。")
 
 
     # 再生コマンド
 
-    @commands.command(name='play', description="play music", aliases=['p'])
+    @app_commands.command(name='play', description="play music")
     async def play(self, ctx):
         """play music"""
-        player = self.get_player(ctx.guild.id)
+        try:
+            player = self.get_player(ctx.guild.id)
 
-        voice_client = self.get_voice_client(ctx.guild.id)
-        if voice_client is None:
-            await self.join(ctx)
+            voice_client = self.get_voice_client(ctx.guild.id)
+            if voice_client is None:
+                await self.join_voice_chat(ctx.user)
 
-        # コマンド打った時のLLを読み込む
-        mixlist = MixList()
-        users = self.get_voice_user_ids(ctx.guild.id)
+            # コマンド打った時のLLを読み込む
+            mixlist = MixList()
+            users = self.get_voice_user_ids(ctx.guild.id)
 
-        for user in users:
-            likelist = LikeList.load(user)
-            mixlist.add_playlist(likelist)
+            for user in users:
+                likelist = LikeList.load(user)
+                mixlist.add_playlist(likelist)
 
-        
-        #likelist = LikeList.load(ctx.author.id)
-        player.playlist = mixlist
-        self.mix_mode = True
+            
+            #likelist = LikeList.load(ctx.author.id)
+            player.playlist = mixlist
+            self.mix_mode = True
 
-        # 初期3曲を読み込む
-        # await player.fill_playlist_3()
-        # print('player queue', player.queue)
+            # 初期3曲を読み込む
+            # await player.fill_playlist_3()
+            # print('player queue', player.queue)
 
-        asyncio.create_task(player.start())
-        self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
-        # await ctx.send("play")
+            asyncio.create_task(player.start())
+            self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
+            # await ctx.send("play")
+        except:
+            await ctx.response.send_message("エラーが発生しました。")
 
-    @commands.command(name='insert', description="insert music into next queue", aliases=['i'])
-    async def insert(self, ctx, arg):
+    @app_commands.command(name='insert', description="insert music into next queue")
+    @app_commands.describe(arg='url')
+    async def insert(self, ctx, arg: str):
         """insert music into next queue"""
         player = self.get_player(ctx.guild.id)
         player.insert_song_next(Song(url=arg))
-        await ctx.send(f"insert {arg}")
+        await ctx.response.send_message(f"insert {arg}")
 
-    @commands.command(name='pause', description="pause music")
+    @app_commands.command(name='pause', description="pause music")
     async def pause(self, ctx):
         """pause music"""
         player = self.get_player(ctx.guild.id)
         player.pause()
-        await ctx.send("pause") 
+        await ctx.response.send_message("pause") 
 
-    @commands.command(name='unpause', description="resume music")
+    @app_commands.command(name='unpause', description="resume music")
     async def unpause(self, ctx):
         """resume music"""
         player = self.get_player(ctx.guild.id)
         player.unpause()
-        await ctx.send("unpause")
+        await ctx.response.send_message("unpause")
 
-    @commands.command(name='skip', description="skip music")
+    @app_commands.command(name='skip', description="skip music")
     async def skip(self, ctx):
         """skip music"""
         player = self.get_player(ctx.guild.id)
         player.skip()
-        await ctx.send("skip")
+        await ctx.response.send_message("skiped")
 
-    @commands.command(name='repeat', description="repeat music")
+    @app_commands.command(name='repeat', description="repeat music")
     async def repeat(self, ctx):
         """repeat music"""
-        await ctx.send("repeat")    
+        await ctx.response.send_message("repeat")    
 
-    @commands.command(name='shuffle', description="shuffle music")
+    @app_commands.command(name='shuffle', description="shuffle music")
     async def shuffle(self, ctx):
         """shuffle music"""
-        await ctx.send("shuffle")
+        await ctx.response.send_message("shuffle")
 
-    @commands.command(name='volume', description="volume music")
+    @app_commands.command(name='volume', description="volume music")
     async def volume(self, ctx):
         """volume music"""
-        await ctx.send("volume")
+        await ctx.response.send_message("volume")
 
-    @commands.command(name='save', description="save playlist")
+    @app_commands.command(name='save', description="save playlist")
     async def save(self, ctx):
         """save playlist"""
-        await ctx.send("save")
+        await ctx.response.send_message("save")
 
-    @commands.command(name='load', description="load playlist")
+    @app_commands.command(name='load', description="load playlist")
     async def load(self, ctx):
         """load playlist"""
-        await ctx.send("load")
+        await ctx.response.send_message("load")
 
-    @commands.command(name='now', description="now playing", aliases=['np'])
+    @app_commands.command(name='now', description="now playing")
     async def now(self, ctx):
         """now playing"""
-        await ctx.send(self.get_player(ctx.guild.id).get_current_song())
-        await ctx.send("now")
+        await ctx.response.send_message(self.get_player(ctx.guild.id).get_current_song())
+        await ctx.response.send_message("now")
 
-    @commands.command(name='playlist', description="show playlist", aliases=['pl'])
+    @app_commands.command(name='playlist', description="show playlist")
     async def playlist(self, ctx):
         """show playlist"""
-        await ctx.send('\n'.join(self.get_player(ctx.guild.id).next_3_songs()))
+        await ctx.response.send_message('\n'.join(self.get_player(ctx.guild.id).next_3_songs()))
 
-    @commands.command(name='like', description="add likelist")
-    async def like(self, ctx, arg):
+    @app_commands.command(name='like', description="add likelist")
+    async def like(self, ctx, arg: str):
         """add likelist"""
-        LikeList.load(ctx.author.id).add_song(arg)
+        LikeList.load(ctx.user.id).add_song(arg)
 
-        await ctx.send("like")
+        await ctx.response.send_message("like")
 
-    @commands.command(name='reboot', description="reboot")
+    @app_commands.command(name='reboot', description="reboot")
     async def reboot(self, ctx):
         """reboot"""
         await ctx.send("reboot")
@@ -282,7 +294,7 @@ class Command(commands.Cog):
                 await self.bot.change_presence(activity=discord.Game(name='music'))
                 if self.music_dashboard_message:
                     self.music_dashboard_message = await self.music_dashboard_message.edit(content=self.build_dashboard_message(self.get_player(self.music_dashboard_message.guild.id)))
-                await asyncio.sleep(10)
+                await asyncio.sleep(6)
         except Exception as e:
             print(e)
             self.updating_dashboard = False
@@ -290,6 +302,3 @@ class Command(commands.Cog):
 
     async def post_dashboard(self, player: Player):
         await player.voice_client.channel.send(self.build_dashboard_message(self.get_player(player.voice_client.guild.id)))
-
-    async def setup(self):
-        await self.bot.tree.sync()

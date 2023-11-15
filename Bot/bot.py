@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from .cogs.player_command import Command
 from .cogs.player_channel_observer import ChannelObserver
+from .cogs.management_command import ManagementCommand
 
 class GentleBot():
 
@@ -14,9 +15,11 @@ class GentleBot():
         self.bot = commands.Bot(command_prefix="$", intents=intent)
         self.command_cog = Command(self.bot)
         self.observer_cog = ChannelObserver(self.bot)
+        self.management_cog = ManagementCommand(self.bot)
 
     def run(self, token):
         asyncio.run(self.bot.add_cog(self.command_cog))
         asyncio.run(self.bot.add_cog(self.observer_cog))
+        asyncio.run(self.bot.add_cog(self.management_cog))
         self.bot.run(token)
 

@@ -38,7 +38,6 @@ class Player():
         for _ in range(3 - remain):
             try:
                 song = next(self.playlist.iter)
-                await song.download_metadata()
                 self.queue.append(song)
             except StopIteration:
                 break
