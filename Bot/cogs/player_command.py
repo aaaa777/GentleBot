@@ -89,6 +89,7 @@ class Command(commands.Cog):
     @app_commands.command(name='play', description="play music")
     async def play(self, ctx):
         """play music"""
+        await ctx.response.send_message("play")
         try:
             player = self.get_player(ctx.guild.id)
 
@@ -115,7 +116,7 @@ class Command(commands.Cog):
 
             asyncio.create_task(player.start())
             self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
-            await ctx.response.send_message("play")
+            
         except:
             await ctx.response.send_message("エラーが発生しました。")
 
