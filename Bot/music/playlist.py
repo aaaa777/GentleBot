@@ -15,7 +15,10 @@ class PlayList():
         random.shuffle(self.all_songs)
 
     def insert_after(self, index, song):
-        pass
+        if index < len(self.all_songs):
+            self.all_songs.insert(index + 1, song)
+        else:
+            print("Index out of range. Song not inserted.")
 
     def reset_index(self):
         self.playing_song_index = -1
