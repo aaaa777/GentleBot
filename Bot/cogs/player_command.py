@@ -195,7 +195,7 @@ class Command(commands.Cog):
     @app_commands.command(name='reboot', description="reboot")
     async def reboot(self, ctx):
         """reboot"""
-        await ctx.send("reboot")
+        await ctx.response.send_message("reboot")
         await self.leave(ctx)
         os.execv(sys.executable, ['python'] + sys.argv)
 
