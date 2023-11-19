@@ -50,7 +50,7 @@ class Song:
         # metadata_cor = self.download_metadata()
         # self.metadata_cor = metadata_cor
         self.proc = None
-        self.metadata = None
+        self.__metadata = None
         self.url = url
         # self.start_download_metadata(url)
         self.music_type = music_type
@@ -64,11 +64,66 @@ class Song:
         self.like_count = None
 
         loop = asyncio.get_event_loop()
-        asyncio.create_task(self.async_init_metadata())
+        asyncio.create_task(self.async_init_metadata2())
+
+    @property
+    def metadata(self):
+        return self.__metadata
+
+    @metadata.setter
+    def metadata(self, metadata):
+        self.__metadata = metadata
+
+    async def await_metadata(self):
+        while self.metadata is None:
+            await asyncio.sleep(1)
+        return self.metadata
+
+    async def async_init_metadata2(self):
+        if self.proc is not None:
+            return
+        
+        if self.url is None:
+            raise Exception('song url is None')
+        
+        if self.url in self.metadata_cache:
+            return self.metadata_cache[self.url]
+        
+        self.proc = await asyncio.create_subprocess_shell(' '.join(['yt-dlp', '--dump-json', '--format', 'bestaudio/best', self.url]), stdout=PIPE, stderr=STDOUT)
+
+        try:
+            # communicateメソッドでプロセスの終了を待ち、出力を取得します。
+            stdout, _ = await self.proc.communicate()
+            outs = stdout
+
+        except Exception as e:
+            print(e)
+            self.proc.kill()
+            self.proc = None
+            outs = "{'proc_status': 'error'}"
+
+        metadata = json.loads(outs)
+        if 'proc_status' not in metadata:
+            metadata['proc_status'] = 'ok'
+
+        # キーでフィルタリング
+        metadata = {key: metadata[key] for key in self.metadata_filter if key in metadata}
+
+        # メタデータをキャッシュとプロパティにセット
+        self.metadata_cache[self.url] = metadata
+        self.title = metadata['title'] if 'title' in metadata else None
+        self.duration = metadata['duration'] if 'duration' in metadata else None
+        self.thumbnail = metadata['thumbnail'] if 'thumbnail' in metadata else None
+        self.description = metadata['description'] if 'description' in metadata else None
+        self.view_count = metadata['view_count'] if 'view_count' in metadata else None
+        self.comment_count = metadata['comment_count'] if 'comment_count' in metadata else None
+        self.like_count = metadata['like_count'] if 'like_count' in metadata else None
+        self.metadata = metadata
+
+        return metadata
 
     async def async_init_metadata(self):
         self.proc = 'awaiting'
-        loop = asyncio.get_running_loop()
         await self.start_download_metadata(self.url)
         # await self.start_download_metadata(self.url)
         await self.sync_metadata()
@@ -118,16 +173,7 @@ class Song:
         metadata = await self.get_metadata()
         # print(metadata)
 
-        metadata = {key: metadata[key] for key in self.metadata_filter if key in metadata}
 
-        self.title = metadata['title']
-        self.duration = metadata['duration']
-        self.thumbnail = metadata['thumbnail']
-        self.description = metadata['description']
-        self.view_count = metadata['view_count']
-        self.comment_count = metadata['comment_count']
-        self.like_count = metadata['like_count'] if 'like_count' in metadata else None
-        self.metadata = metadata
 
         self.metadata_cache[self.url] = metadata
         return metadata
