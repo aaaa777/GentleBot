@@ -19,14 +19,13 @@ class Command(commands.Cog):
         self.bot = bot
         self.players = {}
         self.mix_mode = False
-        self.updating_dashboard = False
+        # self.updating_dashboard = False
 
-        self.music_dashboard_message = None
+        # self.music_dashboard_message = None
 
     @commands.Cog.listener('on_ready')
     async def on_ready(self):
         print('music on_ready')
-        asyncio.create_task(self.update_dashboard_loop())
 
     @app_commands.command(name='hello', description="Says hello")
     async def hello(self, ctx: Interaction):
@@ -39,6 +38,8 @@ class Command(commands.Cog):
     async def join(self, ctx: Interaction):
         """join voice channel"""
         try:
+            # player = self.get_player(ctx.guild.id)
+
             # コマンドを実行したメンバーがボイスチャンネルに接続しているか確認する
             author = ctx.user
             # if author.voice is None:
@@ -50,6 +51,7 @@ class Command(commands.Cog):
 
             # users = self.get_voice_user_ids(ctx.guild.id)
             # player.update_users(users)
+            
 
             await ctx.response.send_message("接続しました。")
         except:
@@ -77,9 +79,11 @@ class Command(commands.Cog):
         # 切断する
         await guild.voice_client.disconnect()
 
-        msg = self.music_dashboard_message
-        self.music_dashboard_message = None
-        await msg.delete()
+        player = self.get_player(guild.id)
+
+        if player:
+            player.kill()
+            
         # self.players.pop(ctx.guild.id)
         await ctx.response.send_message("切断しました。")
 
@@ -115,7 +119,7 @@ class Command(commands.Cog):
             # print('player queue', player.queue)
 
             asyncio.create_task(player.start())
-            self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
+            # player.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
             
         except Exception as e:
             await ctx.channel.send("エラーが発生しました。")
@@ -247,14 +251,12 @@ class Command(commands.Cog):
         if message.author.id == self.bot.user.id:
             return
         
-        vc = self.get_voice_client(message.guild.id)
+        player = self.get_player(message.guild.id)
+        vc = player.voice_client
         if not vc or message.channel.id != vc.channel.id:
             return
         
-        if self.music_dashboard_message:
-            await self.music_dashboard_message.delete()
-
-        self.music_dashboard_message = await message.channel.send(self.build_dashboard_message(self.get_player(message.guild.id)))
+        await self.refresh_dashboard(repost=True)
 
 
     # Utility
@@ -285,24 +287,6 @@ class Command(commands.Cog):
             return None
         return [member.id for member in vc.channel.members if member.bot == False]
     
-    def build_dashboard_message(self, player):
-        return '<' + '>\n<'.join([str(s) for s in player.next_3_songs()]) + '>'
-    
 
-    async def update_dashboard_loop(self, recursive_count=0):
-        if self.updating_dashboard or recursive_count > 3:
-            return
-        self.updating_dashboard = True
-        try:
-            while True:
-                await self.bot.change_presence(activity=discord.Game(name='music'))
-                if self.music_dashboard_message:
-                    self.music_dashboard_message = await self.music_dashboard_message.edit(content=self.build_dashboard_message(self.get_player(self.music_dashboard_message.guild.id)))
-                await asyncio.sleep(6)
-        except Exception as e:
-            print(e)
-            self.updating_dashboard = False
-            await self.update_dashboard_loop(recursive_count=recursive_count+1)
 
-    async def post_dashboard(self, player: Player):
-        await player.voice_client.channel.send(self.build_dashboard_message(self.get_player(player.voice_client.guild.id)))
+        

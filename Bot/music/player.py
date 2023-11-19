@@ -19,29 +19,38 @@ class Player():
         self.repeat_mode = False
         self.voice_client = voice_client
         self.skip_flag = False
+        self.voice_channel = voice_client.channel if voice_client else None
+
+        self.music_dashboard_message = None
+        self.updating_dashboard = False
         # self.__user_likelists = {}
         # self.__playlist = None
         # self.__current_user_index = 0
         self.__current_song_index = -1
         self.playing_coroutine = None
 
+        # ダッシュボードの更新ループを開始
+        asyncio.create_task(self.update_dashboard_loop())
+
     @property
     def voice_client(self):
+        # TODO: vcが無くなった場合の処理
         return self.__voice_client
     
     @voice_client.setter
     def voice_client(self, voice_client: discord.voice_client):
+        self.voice_channel = voice_client.channel if voice_client else None
         self.__voice_client = voice_client
 
     def set_playlist(self, playlist: PlayList=None):
         self.playlist = playlist
 
 
+    # 3曲分のキューをプレイリストから読んで埋める
     async def fill_playlist_3(self):
-
         remain = self.song_remains()
-        print('remain: {0}'.format(remain))
 
+        # print('remain: {0}'.format(remain))
         for _ in range(3 - remain):
             try:
                 song = next(self.playlist.iter)
@@ -49,14 +58,21 @@ class Player():
             except StopIteration:
                 break
 
-
+    # 再生を開始する
     async def start(self):
         if self.playing_coroutine is not None:
             return
         self.playing_coroutine = asyncio.create_task(self.play_loop())
-        # while True:
-        #     await self.playing_coroutine
+
+    # 再生を停止する
+    async def stop(self):
+        if self.playing_coroutine is None:
+            return
+        self.playing_coroutine.cancel()
+        self.playing_coroutine = None
     
+    # 再生のループ
+    # タスク化してstart()で呼び出す
     async def play_loop(self):
         print('play_loop started')
         try:
@@ -77,7 +93,7 @@ class Player():
                     print('playing: {0}, queue: {1}'.format(song, str(self.queue[-3:])))
 
                     try:
-                        ytdl_player = await YTDLSource.from_song_object(song, loop=self.bot.loop)
+                        music_source = await YTDLSource.from_song_object(song, loop=self.bot.loop)
                     except Exception as e:
                         print(e)
                         # 一つの動画ダウンロードに失敗した場合スキップする
@@ -87,7 +103,8 @@ class Player():
                     if self.voice_client is None:
                         raise ValueError('voice_client is None')
                 
-                    self.voice_client.play(ytdl_player, after=lambda e: print(f'Player error: {e}') if e else None)
+                    # 再生
+                    self.voice_client.play(music_source, after=lambda e: print(f'Player error: {e}') if e else None)
 
                     # 再生が終わるまでの待ち判定
                     while self.voice_client.is_playing():
@@ -127,9 +144,9 @@ class Player():
     # 次の3曲を返す
     def next_3_songs(self):
         try:
-            return self.queue[self.__current_song_index + 1:self.__current_song_index + 4]
+            return self.queue[self.__current_song_index:self.__current_song_index + 4]
         except IndexError:
-            return self.queue[self.__current_song_index + 1:]
+            return self.queue[self.__current_song_index:]
         
     # 割り込みで次の曲に挿入する
     def insert_song_next(self, song):
@@ -186,8 +203,66 @@ class Player():
     def load_playlist(self):
         pass
 
+    def kill(self):
+        pass
+
+    # dashboard message
+
+    # 音楽の表示を更新するループ
+    async def update_dashboard_loop(self):
+        # アップデートループが実行されている場合はループを終了
+        if self.updating_dashboard:
+            return
+        
+        # アップデートループをロック
+        self.updating_dashboard = True
+        try:
+            while True:
+                await self.bot.change_presence(activity=discord.Game(name='music'))
+                
+                # 情報を更新
+                await self.refresh_dashboard(repost=self.music_dashboard_message is None)
+                await asyncio.sleep(10)
+        except Exception as e:
+            print(e)
+            self.updating_dashboard = False
+
+    # async def post_dashboard(self, player: Player):
+    #     await player.voice_client.channel.send(self.build_dashboard_message(self.get_player(player.voice_client.guild.id)))
+
+    async def refresh_dashboard(self, repost=False):
+        if self.voice_channel is None:
+            return
+
+        old_message = self.music_dashboard_message
+        # 再投稿オンの場合は投稿する
+        if repost:
+            content = self.build_dashboard_message()
+            self.music_dashboard_message = await self.voice_channel.send(content=content)
+        
+            # 古い投稿が残っている場合削除する
+            if old_message:
+                await old_message.delete()
+
+        else:
+            # 再投稿オフの場合は投稿がなければ投稿する
+            if self.music_dashboard_message is None:
+                content=self.build_dashboard_message()
+                self.music_dashboard_message = await self.voice_channel.send(content=content)
+
+            # 投稿があれば更新する
+            else:
+                content=self.build_dashboard_message()
+                await self.music_dashboard_message.edit(content=content)
+                return
+            
+        # self.music_dashboard_message = None
 
     # message responder
 
     async def send_playlist_ended(self):
         await self.voice_client.channel.send('playlist ended')
+
+    def build_dashboard_message(self):
+        return '<' + '>\n<'.join([s.await_metadata and str(s) for s in self.next_3_songs()]) + '>'
+    

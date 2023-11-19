@@ -93,7 +93,10 @@ class Song:
         try:
             # communicateメソッドでプロセスの終了を待ち、出力を取得します。
             stdout, _ = await self.proc.communicate()
+        
             outs = stdout
+        # except UnicodeDecodeError:
+        #     outs = stdout.decode('bytes')
 
         except Exception as e:
             print(e)
