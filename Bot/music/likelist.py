@@ -5,7 +5,7 @@ from ..api.likelist import LikeListAPI
 
 class LikeList(PlayList):
 
-    likelist_cache = {}
+    # likelist_cache = {}
 
     def __init__(self, likelist_api: LikeListAPI):
         self.user_id = likelist_api.user_id
@@ -23,11 +23,11 @@ class LikeList(PlayList):
 
     @classmethod
     def load(cls, user_id):
-        if user_id in cls.likelist_cache:
-            return cls.likelist_cache[user_id]
+        # if user_id in cls.likelist_cache:
+        #     return cls.likelist_cache[user_id]
         
         likelist = cls(likelist_api=LikeListAPI(user_id))
-        cls.likelist_cache[user_id] = likelist
+        # cls.likelist_cache[user_id] = likelist
 
         return likelist
     
