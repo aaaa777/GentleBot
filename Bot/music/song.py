@@ -40,19 +40,17 @@ class Song:
         'extractor',
         'id',
         'ext',
+
+        # for system
+        'proc_status'
     ]
 
     metadata_cache = {}
 
     def __init__(self, url: str, start_time: int=None, end_time: int=None, music_type: str=None):
-        # loop = asyncio.get_event_loop()
-        # loop.run_in_executor(None, lambda: self.download_metadata())
-        # metadata_cor = self.download_metadata()
-        # self.metadata_cor = metadata_cor
         self.proc = None
         self.__metadata = None
         self.url = url
-        # self.start_download_metadata(url)
         self.music_type = music_type
 
         self.title = 'Loading...'
@@ -63,7 +61,7 @@ class Song:
         self.comment_count = None
         self.like_count = None
 
-        loop = asyncio.get_event_loop()
+        # メタデータのダウンロードを非同期で実行
         asyncio.create_task(self.async_init_metadata2())
 
     @property
@@ -74,6 +72,7 @@ class Song:
     def metadata(self, metadata):
         self.__metadata = metadata
 
+    # メタデータを読み取る前に呼び出すと、メタデータのダウンロードを待ちます。
     async def await_metadata(self):
         while self.metadata is None:
             await asyncio.sleep(1)
