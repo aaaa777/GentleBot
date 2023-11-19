@@ -6,6 +6,9 @@ class MixList(PlayList):
         super().__init__()
         self.__playlist_cursol = 0
 
+    def __len__(self):
+        return sum([len(playlist) for playlist in self.playlists])
+
     def add_playlist(self, playlist):
         self.playlists.append(playlist)
 

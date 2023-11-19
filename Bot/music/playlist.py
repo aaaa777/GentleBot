@@ -8,6 +8,9 @@ class PlayList():
         self.playing_song_index = -1
         self.iter = iter(self)
 
+    def __len__(self):
+        return len(self.all_songs)
+
     def add_song(self, song):
         self.all_songs.append(song)
 
