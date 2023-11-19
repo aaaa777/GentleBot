@@ -328,5 +328,7 @@ class Player():
                 value="{0}".format(str(song)),
                 inline=False
             )
+
+        embed.set_footer(text="playlist: {0}/{1}".format(self.__current_song_index + 1, len(self.playlist)))
         return embed
     
