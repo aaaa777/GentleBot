@@ -23,7 +23,8 @@ class Player():
         self.mix_mode = False
 
         self.music_dashboard_message = None
-        self.updating_dashboard = False
+        self.music_dashboard_message_text = ""
+        self.dashboard_loop_running = False
         # self.__user_likelists = {}
         # self.__playlist = None
         # self.__current_user_index = 0
@@ -113,8 +114,9 @@ class Player():
 
                     # リピートモードの場合はsongをそのままにして再生
                     if not self.repeat_mode:
-                        print('repeat mode enabled, play again')
                         break
+
+                    print('repeat mode enabled, play again')
         except Exception as e:
             print(e)
             return
@@ -124,6 +126,7 @@ class Player():
             self.playing_coroutine = None
 
         await self.send_playlist_ended()
+        await self.refresh_dashboard(repost=True)
 
     
     def pause(self):
@@ -155,6 +158,9 @@ class Player():
 
     def unrepeat(self):
         self.repeat_mode = False
+
+    def toggle_repeat(self):
+        self.repeat_mode = not self.repeat_mode
 
     def shuffle(self):
         pass
@@ -228,11 +234,11 @@ class Player():
     # 音楽の表示を更新するループ
     async def update_dashboard_loop(self):
         # アップデートループが実行されている場合はループを終了
-        if self.updating_dashboard:
+        if self.dashboard_loop_running:
             return
         
         # アップデートループをロック
-        self.updating_dashboard = True
+        self.dashboard_loop_running = True
         try:
             while True:
                 await self.bot.change_presence(activity=discord.Game(name='music'))
@@ -242,20 +248,25 @@ class Player():
                 await asyncio.sleep(10)
         except Exception as e:
             print(e)
-            self.updating_dashboard = False
+            self.dashboard_loop_running = False
 
     # async def post_dashboard(self, player: Player):
     #     await player.voice_client.channel.send(self.build_dashboard_message(self.get_player(player.voice_client.guild.id)))
 
-    async def refresh_dashboard(self, repost=False):
+    async def refresh_dashboard(self, repost=False, message=None):
         if self.voice_channel is None:
             return
 
         old_message = self.music_dashboard_message
         # 再投稿オンの場合は投稿する
+        # content = self.build_dashboard_message()
+        if message:
+            self.music_dashboard_message_text = message
+        content = self.music_dashboard_message_text
+            
+        embed = await self.build_dashboard_embed_queue()
         if repost:
-            content = self.build_dashboard_message()
-            self.music_dashboard_message = await self.voice_channel.send(content=content)
+            self.music_dashboard_message = await self.voice_channel.send(content=content, embed=embed)
         
             # 古い投稿が残っている場合削除する
             if old_message:
@@ -264,16 +275,24 @@ class Player():
         else:
             # 再投稿オフの場合は投稿がなければ投稿する
             if self.music_dashboard_message is None:
-                content=self.build_dashboard_message()
-                self.music_dashboard_message = await self.voice_channel.send(content=content)
+                self.music_dashboard_message = await self.voice_channel.send(content=content, embed=embed)
 
             # 投稿があれば更新する
             else:
-                content=self.build_dashboard_message()
-                await self.music_dashboard_message.edit(content=content)
+                await self.music_dashboard_message.edit(content=content, embed=embed)
                 return
+
+        # await self.music_dashboard_message.add_reaction('⏯️')
+        await self.music_dashboard_message.add_reaction('⏭️')
+        await self.music_dashboard_message.add_reaction('🔁')
+        await self.music_dashboard_message.add_reaction('🔀')
             
         # self.music_dashboard_message = None
+
+    async def remove_dashboard(self):
+        if self.music_dashboard_message:
+            await self.music_dashboard_message.delete()
+            self.music_dashboard_message = None
 
     # message responder
 
@@ -282,4 +301,32 @@ class Player():
 
     def build_dashboard_message(self):
         return '<' + '>\n<'.join([s.await_metadata and str(s) for s in self.next_3_songs()]) + '>'
+    
+    async def build_dashboard_embed_queue(self):
+        # 現在の曲を表示
+        now_song = self.get_current_song()
+        embed = discord.Embed(
+            title="now {1}: {0}".format(now_song.title, "repeating" if self.repeat_mode else "playing"),
+            # description=now_song.description,
+            url=now_song.url,
+
+            color=0xeee657,
+        )
+        embed.set_thumbnail(url=now_song.thumbnail)
+
+        # 追加したユーザを表示
+        user = await self.bot.fetch_user(now_song.user_id)
+        if user:
+            embed.set_author(name="added by: {0}".format(user.name), icon_url=user.avatar.url)
+
+        # queueの残りを表示
+        for i, song in enumerate(self.next_3_songs()):
+            if i == 0:
+                continue
+            embed.add_field(
+                name="queue #{0}".format(i),
+                value="{0}".format(str(song)),
+                inline=False
+            )
+        return embed
     

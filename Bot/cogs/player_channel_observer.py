@@ -30,7 +30,7 @@ class ChannelObserver(commands.Cog):
         await message.add_reaction('♥️')
 
     def save_like_song(self, user_id, url):
-        LikeList.load(user_id).add_song(Song(url=url))
+        LikeList.load(user_id).add_song(Song(url=url, user_id=user_id))
 
     @commands.Cog.listener('on_raw_reaction_add')
     async def on_reaction_add(self, event):

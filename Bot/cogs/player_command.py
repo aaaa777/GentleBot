@@ -93,10 +93,10 @@ class Command(commands.Cog):
     # 再生コマンド
 
     @app_commands.command(name='play', description="play music")
-    @app_commands.describe(arg='url')
-    async def play(self, ctx, arg: str = None):
+    @app_commands.describe(url='url')
+    async def play(self, ctx, url: str = None):
         """play music"""
-        await ctx.response.send_message("play")
+        await ctx.response.send_message("評価した曲リストから再生します")
         try:
             player = self.get_player(ctx.guild.id)
 
@@ -104,7 +104,7 @@ class Command(commands.Cog):
             if voice_client is None:
                 await self.join_voice_chat(ctx.user)
 
-            if arg is None:
+            if url is None:
                 # コマンド打った時のLLを読み込む
                 playlist = MixList()
                 users = self.get_voice_user_ids(ctx.guild.id)
@@ -115,7 +115,7 @@ class Command(commands.Cog):
 
             else:
                 playlist = PlayList()
-                playlist.add_song(Song(url=arg))
+                playlist.add_song(Song(url=url, user_id=ctx.user.id))
 
             
             #likelist = LikeList.load(ctx.author.id)
@@ -132,15 +132,18 @@ class Command(commands.Cog):
         except Exception as e:
             await ctx.channel.send("エラーが発生しました。")
             print(e)
+            return
             # .response.send_message("エラーが発生しました。")
+        # await ctx.response.message.edit_message("再生準備完了！")
 
     @app_commands.command(name='insert', description="insert music into next queue")
-    @app_commands.describe(arg='url')
-    async def insert(self, ctx, arg: str):
+    @app_commands.describe(url='url')
+    async def insert(self, ctx, url: str):
         """insert music into next queue"""
         player = self.get_player(ctx.guild.id)
-        player.insert_song_next(Song(url=arg))
-        await ctx.response.send_message(f"insert {arg}")
+        player.insert_song_next(Song(url=url, user_id=ctx.user.id))
+        await ctx.response.send_message(f"曲がqueue #1に追加されました")
+        await player.refresh_dashboard(repost=True)
 
     @app_commands.command(name='pause', description="pause music")
     async def pause(self, ctx):
@@ -162,7 +165,7 @@ class Command(commands.Cog):
         await ctx.response.send_message("skipping music")
         player = self.get_player(ctx.guild.id)
         player.skip()
-        player.refresh_dashboard(repost=True)
+        await player.refresh_dashboard(repost=True)
 
     @app_commands.command(name='repeat', description="repeat music")
     async def repeat(self, ctx):
@@ -214,6 +217,9 @@ class Command(commands.Cog):
         if ctx.guild.voice_client is not None:
             await ctx.guild.voice_client.disconnect()
         os.execv(sys.executable, ['python'] + sys.argv)
+
+
+    # update state
 
     # VCに新しいユーザが入った時に呼ばれる
     @commands.Cog.listener('on_voice_state_update')
@@ -272,6 +278,38 @@ class Command(commands.Cog):
         
         await player.refresh_dashboard(repost=True)
 
+
+    # reaction controller
+    @commands.Cog.listener('on_reaction_add')
+    async def on_reaction_add(self, reaction, user):
+        if user.bot:
+            return
+        
+        player = self.get_player(reaction.message.guild.id)
+        vc = player.voice_client
+        if not vc or reaction.message.channel.id != vc.channel.id:
+            return
+        
+        if reaction.message.id != player.music_dashboard_message.id:
+            return
+
+        emoji = reaction.emoji
+        await reaction.remove(user)
+        message = ""
+        if str(emoji) == '⏯️':
+            player.pause()
+            message = "paused/playing"
+        if str(emoji) == '⏭️':
+            player.skip()
+            message = "skipped"
+        if str(emoji) == '🔁':
+            player.toggle_repeat()
+            message = "repeated" if player.repeat_mode else "not repeated"
+        if str(emoji) == '🔀':
+            player.shuffle()
+            message = "shuffled"
+
+        await player.refresh_dashboard(message=message)
 
     # Utility
 

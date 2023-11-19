@@ -16,7 +16,7 @@ class LikeListAPI():
         res = self.conn.select(table='likelist', where={'w_col': 'user_id', 'w_op': '=', 'w_val': self.user_id})
         
         if res['status'] == 'ok':
-            self.songs = [Song(url=row['url']) for row in res['records']]
+            self.songs = [Song(url=row['url'], user_id=self.user_id) for row in res['records']]
             print('likelist loaded:', self.songs)
 
         return self.songs

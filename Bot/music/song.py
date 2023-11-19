@@ -47,7 +47,7 @@ class Song:
 
     metadata_cache = {}
 
-    def __init__(self, url: str, start_time: int=None, end_time: int=None, music_type: str=None):
+    def __init__(self, url: str, user_id: str, start_time: int=None, end_time: int=None, music_type: str=None):
         if url is None:
             raise ValueError('Song constructor: url is None')
 
@@ -55,11 +55,12 @@ class Song:
         self.__metadata = None
         self.url = url
         self.music_type = music_type
+        self.user_id = user_id
 
         self.title = 'Loading...{0}'.format(url)
         self.duration = 0
         self.thumbnail = None
-        self.description = 'Loading...'
+        self.description = None
         self.view_count = None
         self.comment_count = None
         self.like_count = None
@@ -130,4 +131,4 @@ class Song:
 
 
     def __str__(self):
-        return f'{self.title} - {self.duration // 60}:{(int)(self.duration % 60):02d}'
+        return f'{self.title} - {int(self.duration // 60)}:{(int)(self.duration % 60):02d}'
