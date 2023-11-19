@@ -170,17 +170,32 @@ class Command(commands.Cog):
     @app_commands.command(name='repeat', description="repeat music")
     async def repeat(self, ctx):
         """repeat music"""
-        await ctx.response.send_message("repeat")    
+        await ctx.response.send_message("repeat")
+        player = self.get_player(ctx.guild.id)
+        player.toggle_repeat()
+        await player.refresh_dashboard(repost=True)   
 
     @app_commands.command(name='shuffle', description="shuffle music")
     async def shuffle(self, ctx):
         """shuffle music"""
         await ctx.response.send_message("shuffle")
+        player = self.get_player(ctx.guild.id)
+        player.shuffle()
+        await player.refresh_dashboard(repost=True)
 
     @app_commands.command(name='volume', description="volume music")
     async def volume(self, ctx):
         """volume music"""
         await ctx.response.send_message("volume")
+
+    @app_commands.command(name='stop', description="stop music and clear queue")
+    async def stop(self, ctx):
+        """stop music and clear queue"""
+        await ctx.response.send_message("終了します、さよなら・・・")
+        player = self.get_player(ctx.guild.id)
+        player.kill()
+        self.delete_player_by_guild_id(ctx.guild.id)
+        # await player.refresh_dashboard(repost=True)
 
     @app_commands.command(name='save', description="save playlist")
     async def save(self, ctx):
@@ -308,6 +323,15 @@ class Command(commands.Cog):
         if str(emoji) == '🔀':
             player.shuffle()
             message = "shuffled"
+        # if str(emoji) == '⏹':
+        #     player.kill()
+        #     return
+        if str(emoji) == '📄':
+            # プレイリストの管理画面に切り替え
+            pass
+        if str(emoji) == '❌':
+            # ダッシュボードを閉じる
+            pass
 
         await player.refresh_dashboard(message=message)
 
@@ -339,6 +363,8 @@ class Command(commands.Cog):
             return None
         return [member.id for member in vc.channel.members if member.bot == False]
     
+    def delete_player_by_guild_id(self, guild_id):
+        del self.players[guild_id]
 
 
         

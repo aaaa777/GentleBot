@@ -16,11 +16,8 @@ class Player():
         self.bot = bot
         self.users = []
         self.queue = []
-        self.repeat_mode = False
         self.voice_client = voice_client
-        self.skip_flag = False
         self.voice_channel = voice_client.channel if voice_client else None
-        self.mix_mode = False
 
         self.music_dashboard_message = None
         self.music_dashboard_message_text = ""
@@ -32,7 +29,14 @@ class Player():
         self.playing_coroutine = None
 
         # ダッシュボードの更新ループを開始
-        asyncio.create_task(self.update_dashboard_loop())
+        self.dashboard_loop_task = asyncio.create_task(self.update_dashboard_loop())
+
+        # state flags
+        self.repeat_mode = False
+        self.skip_flag = False
+        self.mix_mode = False
+        self.disposed = False
+
 
     @property
     def voice_client(self):
@@ -107,6 +111,7 @@ class Player():
 
                     # 再生が終わるまでの待ち判定
                     while self.voice_client.is_playing():
+                        
                         await asyncio.sleep(1)
                     print('song ended')
                     
@@ -117,6 +122,9 @@ class Player():
                         break
 
                     print('repeat mode enabled, play again')
+        except asyncio.CancelledError:
+            print('play_loop cancelled')
+            return
         except Exception as e:
             print(e)
             return
@@ -175,7 +183,13 @@ class Player():
         pass
 
     def kill(self):
-        pass
+        if self.voice_client:
+            asyncio.create_task(self.voice_client.disconnect())
+        if self.music_dashboard_message:
+            asyncio.create_task(self.music_dashboard_message.delete())
+        self.disposed = True
+        self.dashboard_loop_task.cancel()
+        self.dashboard_loop_task = None
 
     
     # 内部操作系
@@ -282,10 +296,15 @@ class Player():
                 await self.music_dashboard_message.edit(content=content, embed=embed)
                 return
 
+        await self.music_dashboard_message.add_reaction('👍')
+        await self.music_dashboard_message.add_reaction('👎')
         # await self.music_dashboard_message.add_reaction('⏯️')
         await self.music_dashboard_message.add_reaction('⏭️')
         await self.music_dashboard_message.add_reaction('🔁')
         await self.music_dashboard_message.add_reaction('🔀')
+        # await self.music_dashboard_message.add_reaction('⏹')
+        await self.music_dashboard_message.add_reaction('📑')
+        await self.music_dashboard_message.add_reaction('❌')
             
         # self.music_dashboard_message = None
 

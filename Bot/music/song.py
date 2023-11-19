@@ -90,34 +90,43 @@ class Song:
         if self.url is None:
             raise Exception('song url is None')
         
+        # メタデータを取得
+        # メタデータのキャッシュがあればそれを使う
         if self.url in self.metadata_cache:
-            return self.metadata_cache[self.url]
-        
-        self.proc = await asyncio.create_subprocess_shell(' '.join(['yt-dlp', '--dump-json', '--format', 'bestaudio/best', self.url]), stdout=PIPE, stderr=STDOUT)
+            metadata = self.metadata_cache[self.url]
+            
+        # キャッシュがなければyt-dlpを実行
+        else:
+            self.proc = await asyncio.create_subprocess_shell(' '.join(['yt-dlp', '--dump-json', '--format', 'bestaudio/best', self.url]), stdout=PIPE, stderr=STDOUT)
 
-        try:
-            # communicateメソッドでプロセスの終了を待ち、出力を取得
-            stdout, _ = await self.proc.communicate()
-            outs = stdout
+            try:
+                # communicateメソッドでプロセスの終了を待ち、出力を取得
+                stdout, _ = await self.proc.communicate()
+                outs = stdout
 
-            # なぜかJSONの後に謎の文字列が混入する場合があるため、一行目のJSONのみ取り出す
-            outs = outs.splitlines()[0]
+                # なぜかJSONの後に謎の文字列が混入する場合があるため、一行目のJSONのみ取り出す
+                outs = outs.splitlines()[0]
+                metadata = json.loads(outs)
 
-        except Exception as e:
-            print(e)
-            self.proc.kill()
-            self.proc = None
-            outs = "{'proc_status': 'error'}"
+            except Exception as e:
+                print(e)
+                self.proc.kill()
+                self.proc = None
+                metadata = {
+                    'proc_status': 'error',
+                    'title': 'Unknown',
+                }
 
-        metadata = json.loads(outs)
-        if 'proc_status' not in metadata:
-            metadata['proc_status'] = 'ok'
+            if 'proc_status' not in metadata:
+                metadata['proc_status'] = 'ok'
 
-        # キーでフィルタリング
-        metadata = {key: metadata[key] for key in self.metadata_filter if key in metadata}
+            # キーでフィルタリング
+            metadata = {key: metadata[key] for key in self.metadata_filter if key in metadata}
+            
+            # キャッシュにセット
+            self.metadata_cache[self.url] = metadata
 
-        # メタデータをキャッシュとプロパティにセット
-        self.metadata_cache[self.url] = metadata
+        # メタデータをプロパティにセット
         self.title = metadata['title'] if 'title' in metadata else None
         self.duration = metadata['duration'] if 'duration' in metadata else None
         self.thumbnail = metadata['thumbnail'] if 'thumbnail' in metadata else None
