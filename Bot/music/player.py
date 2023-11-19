@@ -110,8 +110,7 @@ class Player():
                     self.voice_client.play(music_source, after=lambda e: print(f'Player error: {e}') if e else None)
 
                     # 再生が終わるまでの待ち判定
-                    while self.voice_client.is_playing():
-                        
+                    while self.voice_client.is_playing() or self.voice_client.is_paused():
                         await asyncio.sleep(1)
                     print('song ended')
                     
