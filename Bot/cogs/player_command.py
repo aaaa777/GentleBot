@@ -117,8 +117,10 @@ class Command(commands.Cog):
             asyncio.create_task(player.start())
             self.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
             
-        except:
-            await ctx.response.send_message("エラーが発生しました。")
+        except Exception as e:
+            await ctx.channel.send("エラーが発生しました。")
+            print(e)
+            # .response.send_message("エラーが発生しました。")
 
     @app_commands.command(name='insert', description="insert music into next queue")
     @app_commands.describe(arg='url')
@@ -196,7 +198,8 @@ class Command(commands.Cog):
     async def reboot(self, ctx):
         """reboot"""
         await ctx.response.send_message("reboot")
-        await self.leave(ctx)
+        if ctx.guild.voice_client is not None:
+            await ctx.guild.voice_client.disconnect()
         os.execv(sys.executable, ['python'] + sys.argv)
 
     # VCに新しいユーザが入った時に呼ばれる

@@ -25,6 +25,13 @@ class Player():
         self.__current_song_index = -1
         self.playing_coroutine = None
 
+    @property
+    def voice_client(self):
+        return self.__voice_client
+    
+    @voice_client.setter
+    def voice_client(self, voice_client: discord.voice_client):
+        self.__voice_client = voice_client
 
     def set_playlist(self, playlist: PlayList=None):
         self.playlist = playlist
@@ -66,11 +73,13 @@ class Player():
                 # repeat loop
                 while True:
                     
-                    print('playing: {0}, queue: {1}, playlist: {2}'.format(song, str(self.queue), str(self.playlist.all_songs)))
+                    # print('playing: {0}, queue: {1}, playlist: {2}'.format(song, str(self.queue), str(self.playlist.all_songs)))
+                    print('playing: {0}, queue: {1}'.format(song, str(self.queue[-3:])))
 
                     try:
                         ytdl_player = await YTDLSource.from_url_via_file_stream(song, loop=self.bot.loop)
                     except Exception as e:
+                        print(e)
                         # 一つの動画ダウンロードに失敗した場合スキップする
                         break
                     

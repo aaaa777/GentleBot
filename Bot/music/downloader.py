@@ -63,6 +63,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url_via_file_stream(cls, song, *, loop=None):
         print('from_url_via_file_stream: {0}'.format(str(song)))
+        # song.start_download_metadata(song.url)
+        await song.sync_metadata()
         data = song.metadata
 
         # TODO: プレイリストやプロバイダ毎の処理をここに書く
@@ -170,9 +172,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         out = ffmpeg_result.stdout.decode("utf8")
         
         # 音量を取得
-        print(out)
+        # print(out)
         match = max_volume_re.search(out)
-        a, b = match.group(1), float(match.group(1))
+        # a, b = match.group(1), float(match.group(1))
         return float(match.group(1)) if match else 0.0
     
     @classmethod
