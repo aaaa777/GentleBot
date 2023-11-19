@@ -107,7 +107,12 @@ class Player():
                         raise ValueError('voice_client is None')
                 
                     # 再生
-                    self.voice_client.play(music_source, after=lambda e: print(f'Player error: {e}') if e else None)
+                    try:
+                        self.voice_client.play(music_source, after=lambda e: print(f'Player error: {e}') if e else None)
+                    except Exception as e:
+                        print(e)
+                        # 再生に失敗した場合スキップする
+                        break
 
                     # 再生が終わるまでの待ち判定
                     while self.voice_client.is_playing() or self.voice_client.is_paused():
@@ -158,7 +163,7 @@ class Player():
             vc.stop()
         else:
             # TODO fix
-            self.next_song()
+            vc.stop()
 
     def repeat(self):
         self.repeat_mode = True
