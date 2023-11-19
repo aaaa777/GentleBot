@@ -77,7 +77,7 @@ class Player():
                     print('playing: {0}, queue: {1}'.format(song, str(self.queue[-3:])))
 
                     try:
-                        ytdl_player = await YTDLSource.from_url_via_file_stream(song, loop=self.bot.loop)
+                        ytdl_player = await YTDLSource.from_song_object(song, loop=self.bot.loop)
                     except Exception as e:
                         print(e)
                         # 一つの動画ダウンロードに失敗した場合スキップする

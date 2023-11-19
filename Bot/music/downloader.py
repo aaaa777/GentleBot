@@ -61,7 +61,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     #     return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
     
     @classmethod
-    async def from_url_via_file_stream(cls, song, *, loop=None):
+    async def from_song_object(cls, song, *, loop=None):
         print('from_url_via_file_stream: {0}'.format(str(song)))
         # song.start_download_metadata(song.url)
         # await song.sync_metadata()
