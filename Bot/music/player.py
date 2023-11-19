@@ -12,7 +12,7 @@ from .song import Song
 class Player():
     
     def __init__(self, bot: commands.Bot, voice_client: discord.voice_client) -> None:
-        self.playlist = PlayList()
+        self.__playlist = PlayList()
         self.bot = bot
         self.users = []
         self.queue = []
@@ -20,6 +20,7 @@ class Player():
         self.voice_client = voice_client
         self.skip_flag = False
         self.voice_channel = voice_client.channel if voice_client else None
+        self.mix_mode = False
 
         self.music_dashboard_message = None
         self.updating_dashboard = False
@@ -42,9 +43,16 @@ class Player():
         self.voice_channel = voice_client.channel if voice_client else None
         self.__voice_client = voice_client
 
-    def set_playlist(self, playlist: PlayList=None):
-        self.playlist = playlist
-
+    # def set_playlist(self, playlist: PlayList=None):
+    #     self.playlist = playlist
+    @property
+    def playlist(self):
+        return self.__playlist
+    
+    @playlist.setter
+    def playlist(self, playlist: PlayList):
+        self.__playlist = playlist
+        self.reset_cursor()
 
     # 操作系
 

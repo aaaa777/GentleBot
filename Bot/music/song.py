@@ -78,6 +78,7 @@ class Song:
     # メタデータを読み取る前に呼び出すと、メタデータのダウンロードを待ちます。
     async def await_metadata(self):
         while self.metadata is None:
+            # TODO: ダウンロードに失敗した場合のタイムアウト処理
             await asyncio.sleep(1)
         return self.metadata
 
@@ -94,12 +95,12 @@ class Song:
         self.proc = await asyncio.create_subprocess_shell(' '.join(['yt-dlp', '--dump-json', '--format', 'bestaudio/best', self.url]), stdout=PIPE, stderr=STDOUT)
 
         try:
-            # communicateメソッドでプロセスの終了を待ち、出力を取得します。
+            # communicateメソッドでプロセスの終了を待ち、出力を取得
             stdout, _ = await self.proc.communicate()
-        
             outs = stdout
-        # except UnicodeDecodeError:
-        #     outs = stdout.decode('bytes')
+
+            # なぜかJSONの後に謎の文字列が混入する場合があるため、一行目のJSONのみ取り出す
+            outs = outs.splitlines()[0]
 
         except Exception as e:
             print(e)

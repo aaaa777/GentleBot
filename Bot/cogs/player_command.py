@@ -7,7 +7,9 @@ from discord import Interaction
 from discord import app_commands
 from discord.ext import commands
 
+
 from ..music.player import Player
+from ..music.playlist import PlayList
 from ..music.likelist import LikeList
 from ..music.mixlist import MixList
 from ..music.song import Song
@@ -18,7 +20,7 @@ class Command(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.players = {}
-        self.mix_mode = False
+        # self.mix_mode = False
         # self.updating_dashboard = False
 
         # self.music_dashboard_message = None
@@ -91,7 +93,8 @@ class Command(commands.Cog):
     # 再生コマンド
 
     @app_commands.command(name='play', description="play music")
-    async def play(self, ctx):
+    @app_commands.describe(arg='url')
+    async def play(self, ctx, arg: str = None):
         """play music"""
         await ctx.response.send_message("play")
         try:
@@ -101,18 +104,23 @@ class Command(commands.Cog):
             if voice_client is None:
                 await self.join_voice_chat(ctx.user)
 
-            # コマンド打った時のLLを読み込む
-            mixlist = MixList()
-            users = self.get_voice_user_ids(ctx.guild.id)
+            if arg is None:
+                # コマンド打った時のLLを読み込む
+                playlist = MixList()
+                users = self.get_voice_user_ids(ctx.guild.id)
 
-            for user in users:
-                likelist = LikeList.load(user)
-                mixlist.add_playlist(likelist)
+                for user in users:
+                    likelist = LikeList.load(user)
+                    playlist.add_playlist(likelist)
+
+            else:
+                playlist = PlayList()
+                playlist.add_song(Song(url=arg))
 
             
             #likelist = LikeList.load(ctx.author.id)
-            player.playlist = mixlist
-            self.mix_mode = True
+            player.playlist = playlist
+            # self.mix_mode = True
 
             # 初期3曲を読み込む
             # await player.fill_playlist_3()
@@ -210,9 +218,15 @@ class Command(commands.Cog):
     # VCに新しいユーザが入った時に呼ばれる
     @commands.Cog.listener('on_voice_state_update')
     async def on_voice_state_update(self, member, before, after):
-        if not self.mix_mode:
-            return
         if member.bot:
+            return
+        
+        player = self.get_player(member.guild.id)
+
+        if not player or player.voice_client is None:
+            return
+
+        if not player.mix_mode:
             return
         
         print('mixmode: on_voice_state_update')
@@ -220,7 +234,6 @@ class Command(commands.Cog):
         print('before', before)
         print('after', after)
 
-        player = self.get_player(member.guild.id)
 
         if before.channel is None and after.channel is not None:
             print('join')
