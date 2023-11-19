@@ -46,17 +46,7 @@ class Player():
         self.playlist = playlist
 
 
-    # 3曲分のキューをプレイリストから読んで埋める
-    async def fill_playlist_3(self):
-        remain = self.song_remains()
-
-        # print('remain: {0}'.format(remain))
-        for _ in range(3 - remain):
-            try:
-                song = next(self.playlist.iter)
-                self.queue.append(song)
-            except StopIteration:
-                break
+    # 操作系
 
     # 再生を開始する
     async def start(self):
@@ -110,6 +100,8 @@ class Player():
                     while self.voice_client.is_playing():
                         await asyncio.sleep(1)
                     print('song ended')
+                    
+                    # self.refresh_dashboard()
 
                     # リピートモードの場合はsongをそのままにして再生
                     if not self.repeat_mode:
@@ -125,41 +117,6 @@ class Player():
 
         await self.send_playlist_ended()
 
-
-    def get_next_song(self):
-        try:
-            self.__current_song_index += 1
-            return self.queue[self.__current_song_index]
-        except IndexError:
-            return None
-        
-    def get_current_song(self):
-        if self.__current_song_index < 0:
-            return None
-        try:
-            return self.queue[self.__current_song_index]
-        except IndexError:
-            return None
-        
-    # 次の3曲を返す
-    def next_3_songs(self):
-        try:
-            return self.queue[self.__current_song_index:self.__current_song_index + 4]
-        except IndexError:
-            return self.queue[self.__current_song_index:]
-        
-    # 割り込みで次の曲に挿入する
-    def insert_song_next(self, song):
-        self.queue.insert(self.__current_song_index + 1, song)
-        print('queue: {0}'.format(str(self.queue)))
-
-    # queue内残り曲数を返す
-    def song_remains(self):
-        return len(self.queue) - self.__current_song_index - 1
-    
-    # queueのインデックスをリセットする
-    def reset_cursor(self):
-        self.__current_song_index = -1
     
     def pause(self):
         vc = self.voice_client
@@ -205,6 +162,58 @@ class Player():
 
     def kill(self):
         pass
+
+    
+    # 内部操作系
+
+    # 3曲分のキューをプレイリストから読んで埋める
+    async def fill_playlist_3(self):
+        remain = self.song_remains()
+
+        # print('remain: {0}'.format(remain))
+        for _ in range(3 - remain):
+            try:
+                song = next(self.playlist.iter)
+                self.queue.append(song)
+            except StopIteration:
+                break
+
+
+    def get_next_song(self):
+        try:
+            self.__current_song_index += 1
+            return self.queue[self.__current_song_index]
+        except IndexError:
+            return None
+        
+    def get_current_song(self):
+        if self.__current_song_index < 0:
+            return None
+        try:
+            return self.queue[self.__current_song_index]
+        except IndexError:
+            return None
+        
+    # 次の3曲を返す
+    def next_3_songs(self):
+        try:
+            return self.queue[self.__current_song_index:self.__current_song_index + 4]
+        except IndexError:
+            return self.queue[self.__current_song_index:]
+        
+    # 割り込みで次の曲に挿入する
+    def insert_song_next(self, song):
+        self.queue.insert(self.__current_song_index + 1, song)
+        print('queue: {0}'.format(str(self.queue)))
+
+    # queue内残り曲数を返す
+    def song_remains(self):
+        return len(self.queue) - self.__current_song_index - 1
+    
+    # queueのインデックスをリセットする
+    def reset_cursor(self):
+        self.__current_song_index = -1
+
 
     # dashboard message
 

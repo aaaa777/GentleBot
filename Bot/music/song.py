@@ -48,12 +48,15 @@ class Song:
     metadata_cache = {}
 
     def __init__(self, url: str, start_time: int=None, end_time: int=None, music_type: str=None):
+        if url is None:
+            raise ValueError('Song constructor: url is None')
+
         self.proc = None
         self.__metadata = None
         self.url = url
         self.music_type = music_type
 
-        self.title = 'Loading...'
+        self.title = 'Loading...{0}'.format(url)
         self.duration = 0
         self.thumbnail = None
         self.description = 'Loading...'

@@ -151,9 +151,10 @@ class Command(commands.Cog):
     @app_commands.command(name='skip', description="skip music")
     async def skip(self, ctx):
         """skip music"""
+        await ctx.response.send_message("skipping music")
         player = self.get_player(ctx.guild.id)
         player.skip()
-        await ctx.response.send_message("skiped")
+        player.refresh_dashboard(repost=True)
 
     @app_commands.command(name='repeat', description="repeat music")
     async def repeat(self, ctx):
@@ -184,7 +185,7 @@ class Command(commands.Cog):
     async def now(self, ctx):
         """now playing"""
         await ctx.response.send_message(self.get_player(ctx.guild.id).get_current_song())
-        await ctx.response.send_message("now")
+        # await ctx.response.send_message("now")
 
     @app_commands.command(name='playlist', description="show playlist")
     async def playlist(self, ctx):
@@ -256,7 +257,7 @@ class Command(commands.Cog):
         if not vc or message.channel.id != vc.channel.id:
             return
         
-        await self.refresh_dashboard(repost=True)
+        await player.refresh_dashboard(repost=True)
 
 
     # Utility
