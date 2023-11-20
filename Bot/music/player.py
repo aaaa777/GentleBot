@@ -18,6 +18,7 @@ class Player():
         self.queue = []
         self.voice_client = voice_client
         self.voice_channel = voice_client.channel if voice_client else None
+        self.guild = voice_client.guild if voice_client else None
 
         self.music_dashboard_message = None
         self.music_dashboard_message_text = ""
@@ -46,6 +47,7 @@ class Player():
     @voice_client.setter
     def voice_client(self, voice_client: discord.voice_client):
         self.voice_channel = voice_client.channel if voice_client else None
+        self.guild_id = voice_client.guild if voice_client else None
         self.__voice_client = voice_client
 
     # def set_playlist(self, playlist: PlayList=None):

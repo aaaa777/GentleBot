@@ -120,11 +120,6 @@ class Command(commands.Cog):
             
             #likelist = LikeList.load(ctx.author.id)
             player.playlist = playlist
-            # self.mix_mode = True
-
-            # 初期3曲を読み込む
-            # await player.fill_playlist_3()
-            # print('player queue', player.queue)
 
             asyncio.create_task(player.start())
             # player.music_dashboard_message = await player.voice_client.channel.send(self.build_dashboard_message(player))
@@ -206,6 +201,16 @@ class Command(commands.Cog):
     async def load(self, ctx):
         """load playlist"""
         await ctx.response.send_message("load")
+
+    @load.command()
+    async def likelist(self, ctx):
+        """load likelist"""
+        await ctx.response.send_message("likelist")
+
+    @load.command()
+    async def playlist(self, ctx, playlist_name: str):
+        """load playlist"""
+        await ctx.response.send_message("playlist {playlist_name}}")
 
     @app_commands.command(name='now', description="now playing")
     async def now(self, ctx):
@@ -366,5 +371,8 @@ class Command(commands.Cog):
     def delete_player_by_guild_id(self, guild_id):
         del self.players[guild_id]
 
-
+    def dispose_player_by_guild_id(self, guild_id):
+        player = self.get_player(guild_id)
+        player.kill()
+        del self.players[guild_id]
         
