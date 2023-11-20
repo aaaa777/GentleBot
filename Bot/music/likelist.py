@@ -1,7 +1,7 @@
 import random
 
 from .playlist import PlayList
-from ..api.likelist import LikeListAPI
+from ..api.likelist_api import LikeListAPI
 
 class LikeList(PlayList):
 
